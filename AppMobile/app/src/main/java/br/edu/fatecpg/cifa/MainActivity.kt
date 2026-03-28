@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
 
             val aluno = Aluno(raTexto, senhaTexto)
 
-            if (aluno.ra == "1312313" && aluno.senha == "12345") {
+            if (aluno.ra == "123" && aluno.senha == "12345") {
                 val intent = Intent(this, QrcodeActivity::class.java)
                 intent.putExtra("NOME_ALUNO", "Fábio") // Passando o nome do aluno
                 startActivity(intent)
