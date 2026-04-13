@@ -1,0 +1,8 @@
+<p>alunos works!</p>
+
+<pre>{{ alunos | json }}</pre>
+
+@for (item of alunos; track item.id) {
+    <li>{{item.name}}</li>
+    <li>{{item.email}}</li>
+}
