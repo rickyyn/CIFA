@@ -51,14 +51,18 @@
                 />
         </FrameLayout>
 
-        <Button
-            android:id="@+id/btnGerar"
+        <EditText
+            android:id="@+id/edt_tempo"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="GERAR QR CODE"
-            android:textColor="@color/background_dark"
-            android:background="@drawable/btn_redondo"
-            android:textStyle="bold"/>
+            android:layout_height="wrap_content"
+            android:backgroundTint="#673AB7"
+            android:ems="10"
+            android:inputType="time"
+            android:minHeight="48dp"
+            android:text="30"
+            android:textAlignment="center"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#673AB7" />
 
     </LinearLayout>
 
