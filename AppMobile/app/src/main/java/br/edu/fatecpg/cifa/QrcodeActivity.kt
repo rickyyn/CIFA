@@ -32,7 +32,7 @@ class QrcodeActivity : AppCompatActivity() {
         var runnable: Runnable? = null
         val tempoIntervalo = 30000L
         val handlerTempo = android.os.Handler(Looper.getMainLooper())
-        var tempoRestante = 60
+        var tempoRestante = 30
         var runnableTempo: Runnable? = null
 
         val tempo = findViewById<TextView>(R.id.edt_tempo)
@@ -44,15 +44,13 @@ class QrcodeActivity : AppCompatActivity() {
         tvNome.setTextColor(getColor(R.color.white))
 
 
-        val expiraEmMillis = System.currentTimeMillis() + 60000
-
         val formato = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         formato.timeZone = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
 
-        val dataFormatada = formato.format(Date(expiraEmMillis))
         fun gerarQrcode(){
             try {
-                val expiraEmMillis = System.currentTimeMillis() + 60000
+                val expiraEmMillis = System.currentTimeMillis() + 30000
+                val dataFormatada = formato.format(Date(expiraEmMillis))
 
                 val dados = mapOf(
                     "nome" to nomeAluno,
@@ -78,7 +76,7 @@ class QrcodeActivity : AppCompatActivity() {
                 tempoRestante--
 
                 if (tempoRestante < 0) {
-                    tempoRestante = 60
+                    tempoRestante = 30
                 }
 
                 handlerTempo.postDelayed(this, 1000)
@@ -87,20 +85,15 @@ class QrcodeActivity : AppCompatActivity() {
 
         handlerTempo.post(runnableTempo!!)
 
-        runnable?.let { handler.removeCallbacks(it) }
         runnable = object : Runnable {
             override fun run() {
                 try {
                     gerarQrcode()
-                    handler.postDelayed(this, 60000)
+                    handler.postDelayed(this, 30000)
                 } catch (e: Exception) { e.printStackTrace() }
             }
         }
         handler.post(runnable!!)
-
-
-
-
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
