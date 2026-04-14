@@ -2,6 +2,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '@/views/Login.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import Dashboard from '@/views/Dashboard.vue'
+import Cadastro from '@/views/Cadastro.vue'
+import Estudantes from '@/views/Estudantes.vue'
+import Relatorios from '@/views/Relatorios.vue'
+import Administracao from '@/views/Administracao.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -23,26 +27,42 @@ const router = createRouter({
           path: 'dashboard',
           name: 'dashboard',
           component: Dashboard
+        },
+        {
+          path: 'cadastro',
+          name: 'cadastro',
+          component: Cadastro
+        },
+        {
+          path: 'estudantes',
+          name: 'estudantes',
+          component: Estudantes 
+        },
+        {
+          path: 'relatorios',
+          name: 'relatorios',
+          component: Relatorios 
+        },
+        {
+          path: 'administracao',
+          name: 'administracao',
+          component: Administracao
         }
       ]
     }
   ]
 })
 
-// Proteção Global de Rotas (Navigation Guard)
+// Navigation Guard para Proteção de Rotas
 router.beforeEach((to, from, next) => {
-  // Simulando a verificação de um Token JWT no LocalStorage
   const isAuthenticated = localStorage.getItem('cifa_auth_token') === 'true'
 
-  // Se tentar acessar o painel administrativo sem estar logado
   if (to.path.startsWith('/admin') && !isAuthenticated) {
     next('/login')
   } 
-  // Se tentar acessar o login já estando logado
   else if (to.path === '/login' && isAuthenticated) {
     next('/admin/dashboard')
   } 
-  // Caso contrário, permite a navegação normal
   else {
     next()
   }
