@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.os.Looper
 import android.view.animation.AlphaAnimation
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
@@ -17,6 +18,9 @@ import com.google.zxing.EncodeHintType
 import com.journeyapps.barcodescanner.BarcodeEncoder
 import java.util.logging.Handler
 import qrcode.QRCode
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class QrcodeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,8 +31,11 @@ class QrcodeActivity : AppCompatActivity() {
         val handler = android.os.Handler(Looper.getMainLooper())
         var runnable: Runnable? = null
         val tempoIntervalo = 30000L
+        val handlerTempo = android.os.Handler(Looper.getMainLooper())
+        var tempoRestante = 30
+        var runnableTempo: Runnable? = null
 
-        val btnGerar = findViewById<Button>(R.id.btnGerar)
+        val tempo = findViewById<TextView>(R.id.edt_tempo)
         val ivQrCode = findViewById<ImageView>(R.id.ivQrCode)
         val tvNome = findViewById<TextView>(R.id.textView2)
 
@@ -37,35 +44,56 @@ class QrcodeActivity : AppCompatActivity() {
         tvNome.setTextColor(getColor(R.color.white))
 
 
+        val formato = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        formato.timeZone = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
+
         fun gerarQrcode(){
             try {
-                val expiraEm = System.currentTimeMillis() + 30000
+                val expiraEmMillis = System.currentTimeMillis() + 30000
+                val dataFormatada = formato.format(Date(expiraEmMillis))
+
                 val dados = mapOf(
                     "nome" to nomeAluno,
                     "idade" to 20,
-                    "expira_em" to expiraEm
+                    "expira_em" to dataFormatada
                 )
 
                 val jsonParaQr = Gson().toJson(dados)
+
                 val barcodeEncoder = BarcodeEncoder()
                 val bitmap = barcodeEncoder.encodeBitmap(jsonParaQr, BarcodeFormat.QR_CODE, 400, 400)
                 ivQrCode.setImageBitmap(bitmap)
-                ajustarBrilho(1.0f)
-            } catch (e: Exception) { e.printStackTrace() }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
-        btnGerar.setOnClickListener {
-            runnable?.let { handler.removeCallbacks(it) }
-            runnable = object : Runnable {
-                override fun run() {
-                    try {
-                        gerarQrcode()
-                        handler.postDelayed(this, 2000)
-                    } catch (e: Exception) { e.printStackTrace() }
+        runnableTempo = object : Runnable {
+            override fun run() {
+                tempo.setText("${tempoRestante}s")
+
+                tempoRestante--
+
+                if (tempoRestante < 0) {
+                    tempoRestante = 30
                 }
+
+                handlerTempo.postDelayed(this, 1000)
             }
-            handler.post(runnable!!)
         }
+
+        handlerTempo.post(runnableTempo!!)
+
+        runnable = object : Runnable {
+            override fun run() {
+                try {
+                    gerarQrcode()
+                    handler.postDelayed(this, 30000)
+                } catch (e: Exception) { e.printStackTrace() }
+            }
+        }
+        handler.post(runnable!!)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
