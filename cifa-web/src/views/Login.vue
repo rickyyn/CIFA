@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Loader2 } from 'lucide-vue-next'
 
 const router = useRouter()
 const identifier = ref('')
@@ -28,7 +29,7 @@ const handleLogin = () => {
 </script>
 
 <template>
-  <main class="min-h-screen w-full flex bg-white font-sans overflow-hidden">
+  <main class="min-h-screen w-full flex bg-white font-poppins overflow-hidden">
     
     <aside class="hidden lg:flex flex-col justify-between w-1/2 relative p-12 text-white bg-[#0A0B1A]">
       <div class="absolute inset-0 overflow-hidden pointer-events-none">
@@ -101,9 +102,14 @@ const handleLogin = () => {
           <Button 
             type="submit" 
             :disabled="isLoading"
+            v-auto-animate
             class="w-full h-12 mt-2 bg-[#1A1A3A] hover:bg-[#0F0F24] text-white font-medium text-base rounded-lg transition-all shadow-sm"
           >
-            {{ isLoading ? 'Autenticando...' : 'Entrar' }}
+            <div v-if="isLoading" class="flex items-center justify-center gap-2">
+              <Loader2 class="w-5 h-5 animate-spin" />
+              <span>Autenticando...</span>
+            </div>
+            <span v-else>Entrar</span>
           </Button>
 
         </form>
@@ -115,6 +121,11 @@ const handleLogin = () => {
 </template>
 
 <style scoped>
+/* Tipografia Poppins importada/garantida para a tela de login */
+.font-poppins {
+  font-family: 'Poppins', sans-serif;
+}
+
 @keyframes wave {
   0%, 60%, 100% { transform: rotate(0deg); }
   10%, 30% { transform: rotate(14deg); }
