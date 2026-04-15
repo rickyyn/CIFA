@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 const router = useRouter()
 const route = useRoute()
 
+// Controle do menu mobile
 const isMobileMenuOpen = ref(false)
 
 const handleLogout = () => {
@@ -46,12 +47,19 @@ const closeMobileMenu = () => {
             <p>de Fluxo Acadêmico</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" @click="isMobileMenuOpen = true" class="rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          @click="isMobileMenuOpen = true" 
+          class="rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors"
+        >
           <Menu class="w-6 h-6 text-[#0A102E]" />
         </Button>
       </div>
 
-      <section class="flex-1 min-h-0 flex flex-col relative p-4 md:p-6 overflow-hidden">
+      <section 
+        class="flex-1 min-h-0 flex flex-col relative p-4 md:p-6 overflow-y-auto custom-scrollbar"
+      >
         
         <header 
           v-if="route.path === '/admin/dashboard'" 
@@ -75,12 +83,38 @@ const closeMobileMenu = () => {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');
 
-.font-poppins { font-family: 'Poppins', sans-serif; }
-html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; -webkit-font-smoothing: antialiased; }
+.font-poppins { 
+  font-family: 'Poppins', sans-serif; 
+}
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 20px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-button, input, select { font-family: inherit; }
+html, body { 
+  margin: 0; 
+  padding: 0; 
+  /* Mantém o body fixo para evitar o 'bounce' indesejado no mobile */
+  overflow: hidden; 
+  height: 100%; 
+  -webkit-font-smoothing: antialiased; 
+}
+
+/* Scrollbar Líquida personalizada para o container de conteúdo */
+.custom-scrollbar::-webkit-scrollbar { 
+  width: 6px; 
+}
+
+.custom-scrollbar::-webkit-scrollbar-track { 
+  background: transparent; 
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb { 
+  background-color: #cbd5e1; 
+  border-radius: 20px; 
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb { 
+  background-color: #94a3b8; 
+}
+
+button, input, select { 
+  font-family: inherit; 
+}
 </style>
