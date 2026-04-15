@@ -37,7 +37,7 @@ const studentForm = ref({
 
 // Função de Validação e Persistência
 const handleSubmit = async () => {
-  // Validação rigorosa
+  // Validação rigorosa dos campos
   if (!studentForm.value.name || !studentForm.value.registration || !studentForm.value.course || !studentForm.value.period) {
     toast({
       title: "Erro de Validação",
@@ -50,12 +50,17 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
-    // Simulação de latência de rede
+    // Simulação de latência de rede para feedback visual da animação
     await new Promise(resolve => setTimeout(resolve, 800))
     
-    // Lógica de persistência local para teste funcional
+    // Lógica de persistência local para teste funcional no frontend
     const existingData = JSON.parse(localStorage.getItem('cifa_students') || '[]')
-    existingData.push({ ...studentForm.value, id: Date.now() })
+    
+    existingData.push({ 
+      ...studentForm.value, 
+      id: Date.now() 
+    })
+    
     localStorage.setItem('cifa_students', JSON.stringify(existingData))
     
     toast({
@@ -63,7 +68,7 @@ const handleSubmit = async () => {
       description: `O perfil de ${studentForm.value.name} foi armazenado com sucesso no banco de dados.`,
     })
 
-    // Limpeza do formulário
+    // Limpeza do formulário mantendo a estrutura reativa intacta
     studentForm.value = {
       id: Date.now(),
       name: '',
@@ -92,39 +97,52 @@ const goBack = () => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full space-y-4 font-nunito animate-in fade-in duration-500 overflow-hidden">
+  <div class="flex flex-col h-full space-y-4 font-poppins overflow-hidden">
     
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 shrink-0">
       <Button 
         variant="ghost" 
         size="icon" 
         @click="goBack"
-        class="rounded-full h-8 w-8 hover:bg-slate-200"
+        class="rounded-full h-8 w-8 hover:bg-slate-200 transition-colors"
       >
         <ArrowLeft class="w-4 h-4 text-slate-600" />
       </Button>
       <div>
         <h2 class="text-xl font-bold text-slate-900 tracking-tight">Novo Cadastro</h2>
-        <p class="text-slate-500 text-[9px] uppercase font-bold tracking-[0.2em]">Entrada de dados de alunos e visitantes</p>
+        <p class="text-slate-500 text-[9px] uppercase font-bold tracking-[0.2em]">
+          Entrada de dados de alunos e visitantes
+        </p>
       </div>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
+      
       <div class="w-full max-w-5xl mx-auto bg-white border border-slate-200 rounded-[2rem] shadow-sm p-6 flex flex-col lg:flex-row gap-8">
         
-        <div class="flex flex-col items-center space-y-4 w-full lg:w-1/3 border-r border-slate-100 lg:pr-8">
+        <div class="flex flex-col items-center space-y-4 w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-slate-100 pb-6 lg:pb-0 lg:pr-8">
+          
           <div class="relative">
-            <div class="w-32 h-32 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center">
-              <img v-if="studentForm.avatar" :src="studentForm.avatar" class="w-full h-full object-cover" />
-              <Camera v-else class="w-10 h-10 text-slate-300" />
+            <div class="w-32 h-32 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center border-4 border-white shadow-sm">
+              <img 
+                v-if="studentForm.avatar" 
+                :src="studentForm.avatar" 
+                class="w-full h-full object-cover" 
+              />
+              <Camera 
+                v-else 
+                class="w-10 h-10 text-slate-300" 
+              />
             </div>
             <div class="absolute bottom-1 right-1 bg-[#1A1A3A] text-white p-2 rounded-full shadow-md">
               <UserPlus class="w-3 h-3" />
             </div>
           </div>
           
-          <div class="w-full space-y-1.5">
-            <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">Status Operacional</label>
+          <div class="w-full space-y-1.5 max-w-[240px]">
+            <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1 text-center block">
+              Status Operacional
+            </label>
             <Select v-model="studentForm.status">
               <SelectTrigger class="h-10 rounded-xl border-slate-200 bg-slate-50/50">
                 <SelectValue placeholder="Status" />
@@ -138,16 +156,18 @@ const goBack = () => {
             </Select>
           </div>
           
-          <p class="text-[10px] text-slate-400 text-center leading-normal px-2">
+          <p class="text-[10px] text-slate-400 text-center leading-normal px-2 mt-4 hidden lg:block">
             Certifique-se de que a URL da imagem de perfil seja acessível publicamente para a renderização do avatar.
           </p>
         </div>
 
         <div class="flex-1 space-y-5">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             
             <div class="flex flex-col space-y-1.5 md:col-span-2">
-              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
+              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                Nome Completo
+              </label>
               <Input 
                 v-model="studentForm.name"
                 placeholder="Nome do aluno ou visitante" 
@@ -156,16 +176,20 @@ const goBack = () => {
             </div>
 
             <div class="flex flex-col space-y-1.5">
-              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">Registro Acadêmico (RA)</label>
+              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                Registro Acadêmico (RA)
+              </label>
               <Input 
                 v-model="studentForm.registration"
                 placeholder="Ex: 146028..." 
-                class="h-10 rounded-xl border-slate-200 bg-slate-50 font-mono"
+                class="h-10 rounded-xl border-slate-200 bg-slate-50 font-mono focus-visible:ring-[#1A1A3A]"
               />
             </div>
 
             <div class="flex flex-col space-y-1.5">
-              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">Período Letivo</label>
+              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                Período Letivo
+              </label>
               <Select v-model="studentForm.period">
                 <SelectTrigger class="h-10 rounded-xl border-slate-200 bg-slate-50">
                   <SelectValue placeholder="Selecione" />
@@ -179,7 +203,9 @@ const goBack = () => {
             </div>
 
             <div class="flex flex-col space-y-1.5 md:col-span-2">
-              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">Curso / Área de Atuação</label>
+              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                Curso / Área de Atuação
+              </label>
               <Select v-model="studentForm.course">
                 <SelectTrigger class="h-10 rounded-xl border-slate-200 bg-slate-50">
                   <SelectValue placeholder="Selecione o curso correspondente" />
@@ -194,35 +220,47 @@ const goBack = () => {
             </div>
 
             <div class="flex flex-col space-y-1.5 md:col-span-2">
-              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">Contato (E-mail ou Telefone)</label>
+              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                Contato (E-mail ou Telefone)
+              </label>
               <Input 
                 v-model="studentForm.contact"
                 placeholder="exemplo@fatec.sp.gov.br" 
-                class="h-10 rounded-xl border-slate-200 bg-slate-50"
+                class="h-10 rounded-xl border-slate-200 bg-slate-50 focus-visible:ring-[#1A1A3A]"
               />
             </div>
 
             <div class="flex flex-col space-y-1.5 md:col-span-2">
-              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">Link da Imagem de Perfil</label>
+              <label class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                Link da Imagem de Perfil
+              </label>
               <Input 
                 v-model="studentForm.avatar"
                 placeholder="https://servidor-imagens.com/perfil.jpg" 
-                class="h-10 rounded-xl border-slate-200 bg-slate-50 text-[11px]"
+                class="h-10 rounded-xl border-slate-200 bg-slate-50 text-[11px] focus-visible:ring-[#1A1A3A]"
               />
             </div>
+            
           </div>
 
-          <div class="pt-2 flex justify-end">
+          <div v-auto-animate class="pt-4 flex justify-end">
             <Button 
               @click="handleSubmit"
               :disabled="isSubmitting"
-              class="bg-[#1A1A3A] hover:bg-[#0F0F24] text-white px-8 h-12 rounded-xl font-bold transition-all shadow-sm gap-2 active:scale-[0.98]"
+              class="bg-[#1A1A3A] hover:bg-[#0F0F24] text-white px-8 h-12 rounded-xl font-bold transition-all shadow-sm gap-2 w-full sm:w-auto active:scale-[0.98]"
             >
-              <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
-              <Save v-else class="w-4 h-4" />
-              {{ isSubmitting ? 'Salvando...' : 'Salvar Registro' }}
+              <Loader2 
+                v-if="isSubmitting" 
+                class="w-4 h-4 animate-spin" 
+              />
+              <Save 
+                v-else 
+                class="w-4 h-4" 
+              />
+              {{ isSubmitting ? 'Salvando Registro...' : 'Salvar Registro' }}
             </Button>
           </div>
+          
         </div>
       </div>
     </div>
@@ -230,12 +268,12 @@ const goBack = () => {
 </template>
 
 <style scoped>
-.font-nunito {
-  font-family: 'Nunito', sans-serif;
+.font-poppins {
+  font-family: 'Poppins', sans-serif;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -245,6 +283,10 @@ const goBack = () => {
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: #cbd5e1;
   border-radius: 10px;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: #94a3b8;
 }
 
 input:focus {

@@ -21,7 +21,6 @@ import { Separator } from '@/components/ui/separator'
 
 const router = useRouter()
 
-// Interface rigorosa para os Logs
 interface AccessLog {
   id: string
   timestamp: Date
@@ -71,7 +70,6 @@ const mockLogs = ref<AccessLog[]>([
   { id: 'LOG-020', timestamp: new Date(2026, 3, 13, 9, 20), studentId: 2, studentName: 'Ana Clara Souza', avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=200&auto=format&fit=crop', period: 'Matutino', course: 'ADS', status: 'Autorizado', type: 'Entrada' }
 ])
 
-// Lógica de Filtragem (Sem Calendário Customizado)
 const filteredLogs = computed(() => {
   return mockLogs.value.filter(log => {
     // 1. Busca Global (ID ou Nome)
@@ -83,7 +81,7 @@ const filteredLogs = computed(() => {
     const matchesStatus = filters.value.status === 'todos' || log.status === filters.value.status
     const matchesCourse = filters.value.course === 'todos' || log.course === filters.value.course
 
-    // 3. Filtro de Tempo Preciso (Presets)
+    // 3. Filtro de Tempo Preciso
     let matchesTime = true
     const logDate = new Date(log.timestamp)
     const today = new Date()
@@ -142,7 +140,7 @@ const exportToPDF = () => {
   if (filteredLogs.value.length === 0) return
   const printWindow = window.open('', '_blank')
   if (!printWindow) return
-  let html = `<html><head><style>table{width:100%;border-collapse:collapse;font-family:sans-serif;} th,td{border:1px solid #ddd;padding:8px;font-size:11px;}</style></head><body>`
+  let html = `<html><head><style>body{font-family:sans-serif;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ddd;padding:8px;font-size:11px;}</style></head><body>`
   html += `<h2>Relatório de Logs - CIFA</h2><table><tr><th>ID</th><th>Data</th><th>Estudante</th><th>Curso</th><th>Status</th></tr>`
   filteredLogs.value.forEach(l => { html += `<tr><td>${l.id}</td><td>${formatDate(l.timestamp)}</td><td>${l.studentName}</td><td>${l.course}</td><td>${l.status}</td></tr>` })
   html += `</table></body></html>`
@@ -151,10 +149,10 @@ const exportToPDF = () => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full space-y-4">
+  <div class="flex flex-col h-full space-y-4 font-poppins">
     
     <div class="flex flex-col sm:flex-row justify-between items-center gap-4 py-1">
-      <div class="flex items-center gap-3 w-full sm:w-auto">
+      <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
         
         <div class="relative w-full sm:w-80">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -167,7 +165,7 @@ const exportToPDF = () => {
 
         <Dialog v-model:open="isFilterDialogOpen">
           <DialogTrigger as-child>
-            <Button variant="outline" class="h-10 px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 relative shadow-sm">
+            <Button variant="outline" class="h-10 px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 relative shadow-sm w-full sm:w-auto">
               <Filter class="w-4 h-4" />
               Filtros
               <span v-if="hasActiveFilters" class="absolute -top-1 -right-1 flex h-3 w-3">
@@ -176,14 +174,14 @@ const exportToPDF = () => {
               </span>
             </Button>
           </DialogTrigger>
-          <DialogContent class="rounded-[2.5rem] sm:max-w-[450px] shadow-2xl border-none">
+          <DialogContent class="rounded-[2.5rem] w-[95vw] sm:max-w-[450px] shadow-2xl border-none font-poppins">
             <DialogHeader>
               <DialogTitle class="text-xl font-bold">Refinar Relatórios</DialogTitle>
               <DialogDescription>Ajuste as categorias e o período de tempo.</DialogDescription>
             </DialogHeader>
             
             <div class="grid gap-5 py-2">
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="space-y-2">
                   <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest">Status</label>
                   <Select v-model="filters.status">
@@ -239,9 +237,9 @@ const exportToPDF = () => {
               </div>
             </div>
 
-            <DialogFooter class="flex sm:justify-between gap-2 border-t pt-4">
-              <Button variant="ghost" @click="clearFilters" class="text-slate-500 hover:text-red-500 rounded-xl">Limpar Tudo</Button>
-              <Button @click="isFilterDialogOpen = false; currentPage = 1" class="bg-[#1A1A3A] hover:bg-[#0F0F24] rounded-xl px-10 text-white shadow-lg">Aplicar</Button>
+            <DialogFooter class="flex flex-col sm:flex-row sm:justify-between gap-3 border-t pt-4">
+              <Button variant="ghost" @click="clearFilters" class="text-slate-500 hover:text-red-500 rounded-xl w-full sm:w-auto">Limpar Tudo</Button>
+              <Button @click="isFilterDialogOpen = false; currentPage = 1" class="bg-[#1A1A3A] hover:bg-[#0F0F24] rounded-xl px-10 text-white shadow-lg w-full sm:w-auto">Aplicar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -249,11 +247,11 @@ const exportToPDF = () => {
 
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
-          <Button :disabled="filteredLogs.length === 0" variant="outline" class="h-10 px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm disabled:opacity-50">
+          <Button :disabled="filteredLogs.length === 0" variant="outline" class="h-10 px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm disabled:opacity-50 w-full sm:w-auto">
             <Download class="w-4 h-4" /> Exportar
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" class="w-44 rounded-xl shadow-xl border-none">
+        <DropdownMenuContent align="end" class="w-44 rounded-xl shadow-xl border-none font-poppins">
           <DropdownMenuItem @click="exportToCSV" class="cursor-pointer gap-2 font-medium">
             <FileSpreadsheet class="w-4 h-4 text-emerald-600" /> CSV
           </DropdownMenuItem>
@@ -265,8 +263,9 @@ const exportToPDF = () => {
     </div>
 
     <div class="flex-1 bg-white border border-slate-200 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col min-h-0">
-      <div class="flex-1 overflow-auto custom-scrollbar">
-        <Table>
+      <div class="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+        
+        <Table class="min-w-[800px] w-full">
           <TableHeader class="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm">
             <TableRow class="border-b-slate-200">
               <TableHead class="text-slate-600 font-bold px-6 h-12">Data & Tempo <ArrowUpDown class="w-3 h-3 inline ml-1" /></TableHead>
@@ -276,38 +275,59 @@ const exportToPDF = () => {
               <TableHead class="text-slate-600 font-bold px-6 h-12">Status</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          
+          <TableBody v-auto-animate>
             <template v-if="paginatedLogs.length > 0">
               <TableRow v-for="log in paginatedLogs" :key="log.id" class="hover:bg-slate-50/80 transition-colors border-b-slate-100 group">
-                <TableCell class="py-4 px-6 font-mono text-[11px] text-slate-500 whitespace-nowrap">{{ formatDate(log.timestamp) }}</TableCell>
-                <TableCell class="py-4 px-6">
+                <TableCell class="py-4 px-6 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                  {{ formatDate(log.timestamp) }}
+                </TableCell>
+                <TableCell class="py-4 px-6 whitespace-nowrap">
                   <div class="flex items-center gap-3">
                     <img :src="log.avatar" class="w-9 h-9 rounded-full object-cover bg-slate-100" />
                     <span 
                       @click="goToStudent(log.studentId)" 
-                      class="font-medium text-slate-800 hover:text-indigo-600 hover:underline cursor-pointer transition-colors whitespace-nowrap"
-                    >{{ log.studentName }}</span>
+                      class="font-semibold text-slate-800 hover:text-indigo-600 hover:underline cursor-pointer transition-colors"
+                    >
+                      {{ log.studentName }}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell class="py-4 px-6 text-sm text-slate-600">{{ log.period }}</TableCell>
-                <TableCell class="py-4 px-6 text-sm font-semibold text-center" :class="log.type === 'Entrada' ? 'text-blue-600' : 'text-amber-600'">{{ log.type }}</TableCell>
+                <TableCell class="py-4 px-6 text-sm font-semibold text-center" :class="log.type === 'Entrada' ? 'text-blue-600' : 'text-amber-600'">
+                  {{ log.type }}
+                </TableCell>
                 <TableCell class="py-4 px-6">
-                  <Badge :class="log.status === 'Autorizado' ? 'bg-emerald-100 text-emerald-700 border-none' : 'bg-red-100 text-red-700 border-none'" class="font-bold text-[10px] uppercase shadow-none">{{ log.status }}</Badge>
+                  <Badge 
+                    :class="log.status === 'Autorizado' ? 'bg-emerald-100 text-emerald-700 border-none' : 'bg-red-100 text-red-700 border-none'" 
+                    class="font-bold text-[10px] uppercase shadow-none"
+                  >
+                    {{ log.status }}
+                  </Badge>
                 </TableCell>
               </TableRow>
             </template>
             <template v-else>
-              <TableRow><TableCell colspan="5" class="h-64 text-center text-slate-400 italic">Nenhum registro encontrado.</TableCell></TableRow>
+              <TableRow>
+                <TableCell colspan="5" class="h-64 text-center text-slate-400 italic font-medium">
+                  Nenhum registro encontrado.
+                </TableCell>
+              </TableRow>
             </template>
           </TableBody>
         </Table>
+
       </div>
 
-      <div class="bg-slate-50/50 border-t border-slate-200 p-4 px-8 flex items-center justify-between text-sm">
+      <div class="bg-slate-50/50 border-t border-slate-200 p-4 px-4 sm:px-8 flex items-center justify-between text-sm shrink-0">
         <span class="text-slate-500 font-medium">Página {{ currentPage }} de {{ totalPages }}</span>
         <div class="flex items-center gap-2">
-          <Button @click="currentPage--" :disabled="currentPage === 1" variant="outline" size="sm" class="rounded-xl h-9 w-9 p-0 bg-white shadow-sm"><ChevronLeft class="w-4 h-4" /></Button>
-          <Button @click="currentPage++" :disabled="currentPage === totalPages || filteredLogs.length === 0" variant="outline" size="sm" class="rounded-xl h-9 w-9 p-0 bg-white shadow-sm"><ChevronRight class="w-4 h-4" /></Button>
+          <Button @click="currentPage--" :disabled="currentPage === 1" variant="outline" size="sm" class="rounded-xl h-9 w-9 p-0 bg-white shadow-sm">
+            <ChevronLeft class="w-4 h-4" />
+          </Button>
+          <Button @click="currentPage++" :disabled="currentPage === totalPages || filteredLogs.length === 0" variant="outline" size="sm" class="rounded-xl h-9 w-9 p-0 bg-white shadow-sm">
+            <ChevronRight class="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </div>
@@ -315,8 +335,22 @@ const exportToPDF = () => {
 </template>
 
 <style scoped>
-.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
-:global(body) { pointer-events: auto !important; }
+.font-poppins {
+  font-family: 'Poppins', sans-serif;
+}
+
+.custom-scrollbar::-webkit-scrollbar { 
+  width: 6px; 
+  height: 6px; 
+}
+.custom-scrollbar::-webkit-scrollbar-track { 
+  background: transparent; 
+}
+.custom-scrollbar::-webkit-scrollbar-thumb { 
+  background-color: #cbd5e1; 
+  border-radius: 20px; 
+}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb { 
+  background-color: #94a3b8; 
+}
 </style>
