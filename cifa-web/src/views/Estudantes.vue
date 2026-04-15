@@ -41,20 +41,17 @@ interface Student {
   status: 'Ativo' | 'Inativo' | 'Bloqueado' | 'Visitante'
 }
 
-// Estados Reactivos
 const allStudents = ref<Student[]>([])
 const searchQuery = ref('')
 const selectedStudent = ref<Student | null>(null)
 const isDialogOpen = ref(false)
 
-// Filtros expansivos
 const filters = ref({
   period: 'todos',
   course: 'todos',
   status: 'todos'
 })
 
-// Banco de dados simulado nativo
 const defaultStudents: Student[] = [
   { id: 1, name: 'Leonardo Mendonça', period: 'Noturno', course: 'DSM', registration: '1460282113001', contact: 'leonardo.mendonca@fatec.sp.gov.br', avatar: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200&auto=format&fit=crop', status: 'Ativo' },
   { id: 2, name: 'Ana Clara Souza', period: 'Matutino', course: 'ADS', registration: '1460282113042', contact: 'ana.clara.souza.longemailtest@fatec.sp.gov.br', avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=200&auto=format&fit=crop', status: 'Visitante' },
@@ -63,19 +60,14 @@ const defaultStudents: Student[] = [
   { id: 5, name: 'Carlos Eduardo Santos', period: 'Noturno', course: 'DSM', registration: '1460282113019', contact: 'carlos.edu.santos.silva.fatec.pg@gmail.com', avatar: 'https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?q=80&w=200&auto=format&fit=crop', status: 'Ativo' },
 ]
 
-// Carrega dados do LocalStorage e mescla com os padrões
 const loadStudents = () => {
   const storedData = localStorage.getItem('cifa_students')
   const persistedStudents = storedData ? JSON.parse(storedData) : []
-  
-  // Combina os estudantes mockados com os novos cadastros
   allStudents.value = [...defaultStudents, ...persistedStudents]
 }
 
 onMounted(() => {
   loadStudents()
-
-  // Interceptador de Rota (Abre o aluno se vier da tela de Relatórios)
   const queryId = route.query.id
   if (queryId) {
     const target = allStudents.value.find(s => s.id === Number(queryId))
@@ -84,14 +76,11 @@ onMounted(() => {
       return
     }
   }
-  
-  // Seleção Padrão
   if (allStudents.value.length > 0) {
     selectedStudent.value = allStudents.value[0]
   }
 })
 
-// Lógica de Filtragem Cruzada Completa
 const filteredStudents = computed(() => {
   return allStudents.value.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchQuery.value.toLowerCase())
@@ -110,7 +99,6 @@ const clearFilters = () => {
   filters.value.status = 'todos'
 }
 
-// Estilização Dinâmica de Status
 const getStatusStyle = (status: string) => {
   switch (status) {
     case 'Ativo': return 'text-emerald-600'
@@ -121,7 +109,6 @@ const getStatusStyle = (status: string) => {
   }
 }
 
-// FUNÇÕES DE EXPORTAÇÃO
 const exportToCSV = () => {
   if (filteredStudents.value.length === 0) return
   const headers = ['Nome', 'Status', 'Periodo', 'Curso', 'Matricula', 'Contato']
@@ -157,16 +144,7 @@ const exportToPDF = () => {
         <h1>Relatório de Estudantes</h1>
         <p>Sistema CIFA - Emissão: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</p>
         <table>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Status</th>
-              <th>Período</th>
-              <th>Curso</th>
-              <th>Matrícula</th>
-              <th>Contato</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Nome</th><th>Status</th><th>Período</th><th>Curso</th><th>Matrícula</th><th>Contato</th></tr></thead>
           <tbody>
   `
   filteredStudents.value.forEach(s => {
@@ -174,7 +152,6 @@ const exportToPDF = () => {
   })
 
   htmlStr += `</tbody></table></body></html>`
-  
   printWindow.document.write(htmlStr)
   printWindow.document.close()
   printWindow.onload = () => { printWindow.focus(); printWindow.print(); }
@@ -182,7 +159,7 @@ const exportToPDF = () => {
 </script>
 
 <template>
-  <div class="flex flex-1 flex-col min-h-0 gap-4 font-nunito">
+  <div class="flex flex-1 flex-col min-h-0 gap-4 font-poppins">
     
     <div class="flex flex-col sm:flex-row justify-between items-center gap-4 py-1">
       <div class="flex items-center gap-3 w-full sm:w-auto">
@@ -198,16 +175,16 @@ const exportToPDF = () => {
         
         <Dialog v-model:open="isDialogOpen">
           <DialogTrigger as-child>
-            <Button variant="outline" class="h-10 px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm relative">
+            <Button variant="outline" class="h-10 px-4 sm:px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm relative shrink-0">
               <Filter class="w-4 h-4" />
-              Filtros
+              <span class="hidden sm:inline">Filtros</span>
               <span v-if="hasActiveFilters" class="absolute -top-1 -right-1 flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-indigo-600 border border-white"></span>
               </span>
             </Button>
           </DialogTrigger>
-          <DialogContent class="rounded-[2rem] sm:max-w-[425px] border-none shadow-2xl">
+          <DialogContent class="rounded-[2rem] max-w-[90vw] sm:max-w-[425px] border-none shadow-2xl">
             <DialogHeader>
               <DialogTitle class="text-xl font-bold">Refinar Estudantes</DialogTitle>
               <DialogDescription>Selecione os critérios para filtrar a listagem.</DialogDescription>
@@ -255,7 +232,7 @@ const exportToPDF = () => {
               </div>
             </div>
             <Separator />
-            <DialogFooter class="flex sm:justify-between gap-2 pt-2">
+            <DialogFooter class="flex flex-row justify-between gap-2 pt-2">
               <Button variant="ghost" @click="clearFilters" class="text-slate-500 hover:text-red-500 rounded-xl">Limpar Filtros</Button>
               <Button @click="isDialogOpen = false" class="bg-[#1A1A3A] hover:bg-[#0F0F24] rounded-xl px-8 text-white">Aplicar</Button>
             </DialogFooter>
@@ -265,8 +242,9 @@ const exportToPDF = () => {
 
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
-          <Button :disabled="filteredStudents.length === 0" variant="outline" class="h-10 px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm disabled:opacity-50">
-            <Download class="w-4 h-4" /> Exportar
+          <Button :disabled="filteredStudents.length === 0" variant="outline" class="h-10 px-4 sm:px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm disabled:opacity-50 shrink-0">
+            <Download class="w-4 h-4" /> 
+            <span class="hidden sm:inline">Exportar</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="w-40 rounded-xl border-none shadow-xl">
@@ -280,12 +258,12 @@ const exportToPDF = () => {
       </DropdownMenu>
     </div>
 
-    <div class="flex flex-1 gap-6 min-h-0 pb-4">
+    <div class="flex flex-col lg:flex-row flex-1 gap-6 min-h-0 pb-4 overflow-y-auto lg:overflow-hidden custom-scrollbar">
       
-      <div class="w-[360px] flex flex-col">
+      <div class="w-full lg:w-[360px] flex flex-col shrink-0 h-[40vh] lg:h-auto border border-slate-200 lg:border-none rounded-[2rem] lg:rounded-none p-4 lg:p-0">
         <h3 class="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-slate-400 mb-3 border-b border-slate-100 pb-2 ml-1">Estudantes ({{ filteredStudents.length }})</h3>
         
-        <div class="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+        <div v-auto-animate class="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
           <div 
             v-for="student in filteredStudents" 
             :key="student.id"
@@ -294,13 +272,13 @@ const exportToPDF = () => {
             @click="selectedStudent = student"
           >
             <div class="flex items-center gap-3">
-              <img :src="student.avatar" class="w-10 h-10 rounded-full object-cover bg-slate-200" />
-              <div class="flex flex-col">
-                <span class="font-bold text-slate-700 text-sm tracking-tight leading-tight">{{ student.name }}</span>
-                <span class="text-[10px] font-bold uppercase tracking-wider mt-0.5" :class="getStatusStyle(student.status)">{{ student.status }}</span>
+              <img :src="student.avatar" class="w-10 h-10 rounded-full object-cover bg-slate-200 shrink-0" />
+              <div class="flex flex-col overflow-hidden">
+                <span class="font-bold text-slate-700 text-sm tracking-tight leading-tight truncate">{{ student.name }}</span>
+                <span class="text-[10px] font-bold uppercase tracking-wider mt-0.5 truncate" :class="getStatusStyle(student.status)">{{ student.status }}</span>
               </div>
             </div>
-            <Button class="bg-[#1A1A3A] hover:bg-[#0F0F24] text-white rounded-lg px-4 h-8 text-xs font-bold transition-all active:scale-95">
+            <Button class="bg-[#1A1A3A] hover:bg-[#0F0F24] text-white rounded-lg px-4 h-8 text-xs font-bold transition-all active:scale-95 shrink-0 hidden sm:flex">
               Acessar
             </Button>
           </div>
@@ -308,43 +286,44 @@ const exportToPDF = () => {
         </div>
       </div>
 
-      <div class="flex-1 bg-[#EBEBEB] rounded-[2.5rem] p-8 flex flex-col shadow-inner overflow-y-auto custom-scrollbar">
+      <div class="flex-1 bg-[#EBEBEB] rounded-[2.5rem] p-6 sm:p-8 flex flex-col shadow-inner overflow-y-auto custom-scrollbar shrink-0 h-fit lg:h-auto">
         <template v-if="selectedStudent">
-          <div class="flex items-center gap-6 mb-10 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <img :src="selectedStudent.avatar" class="w-24 h-24 rounded-full object-cover bg-slate-200 shadow-lg border-4 border-white/50" />
-            <div class="flex flex-col">
-              <h2 class="text-3xl font-extrabold text-slate-900 tracking-tighter leading-tight">{{ selectedStudent.name }}</h2>
-              <span class="text-sm font-bold uppercase tracking-widest mt-1" :class="getStatusStyle(selectedStudent.status)">
+          
+          <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-8 sm:mb-10 text-center sm:text-left">
+            <img :src="selectedStudent.avatar" class="w-24 h-24 rounded-full object-cover bg-slate-200 shadow-lg border-4 border-white/50 shrink-0" />
+            <div class="flex flex-col items-center sm:items-start">
+              <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tighter leading-tight">{{ selectedStudent.name }}</h2>
+              <span class="text-xs font-bold uppercase tracking-widest mt-1" :class="getStatusStyle(selectedStudent.status)">
                 Status: {{ selectedStudent.status }}
               </span>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-x-10 gap-y-10 max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8 max-w-2xl w-full">
             
-            <div class="flex flex-col border-l-2 border-slate-300 pl-5 py-1">
+            <div class="flex flex-col border-l-2 border-slate-300 pl-4 py-1">
               <span class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Período Letivo</span>
-              <span class="text-lg font-bold text-slate-800">{{ selectedStudent.period }}</span>
+              <span class="text-lg font-bold text-slate-800 break-words">{{ selectedStudent.period }}</span>
             </div>
 
-            <div class="flex flex-col border-l-2 border-slate-300 pl-5 py-1">
+            <div class="flex flex-col border-l-2 border-slate-300 pl-4 py-1">
               <span class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Matrícula (RA)</span>
-              <span class="text-lg font-bold text-slate-800 font-mono">{{ selectedStudent.registration }}</span>
+              <span class="text-lg font-bold text-slate-800 font-mono break-words">{{ selectedStudent.registration }}</span>
             </div>
             
-            <div class="flex flex-col border-l-2 border-slate-300 pl-5 py-1 col-span-2">
+            <div class="flex flex-col border-l-2 border-slate-300 pl-4 py-1 sm:col-span-2">
               <span class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Curso / Formação</span>
-              <span class="text-lg font-bold text-slate-800">{{ selectedStudent.course }}</span>
+              <span class="text-lg font-bold text-slate-800 break-words">{{ selectedStudent.course }}</span>
             </div>
             
-            <div class="flex flex-col border-l-2 border-slate-300 pl-5 py-1 col-span-2">
+            <div class="flex flex-col border-l-2 border-slate-300 pl-4 py-1 sm:col-span-2">
               <span class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Informações de Contato</span>
-              <span class="text-lg font-bold text-slate-800 break-all leading-tight">{{ selectedStudent.contact }}</span>
+              <span class="text-lg font-bold text-slate-800 break-words leading-tight">{{ selectedStudent.contact }}</span>
             </div>
           </div>
         </template>
         
-        <div v-else class="flex-1 flex items-center justify-center text-slate-400 text-sm italic">
+        <div v-else class="flex-1 flex items-center justify-center text-slate-400 text-sm italic py-10">
           Selecione um estudante para visualizar a ficha técnica.
         </div>
       </div>
@@ -354,8 +333,8 @@ const exportToPDF = () => {
 </template>
 
 <style scoped>
-.font-nunito {
-  font-family: 'Nunito', sans-serif;
+.font-poppins {
+  font-family: 'Poppins', sans-serif;
 }
 
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }

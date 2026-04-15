@@ -1,40 +1,69 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter, useRoute, RouterView } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import Toaster from '@/components/ui/toast/Toaster.vue'
+import { Menu } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
 
 const router = useRouter()
 const route = useRoute()
+
+const isMobileMenuOpen = ref(false)
 
 const handleLogout = () => {
   localStorage.removeItem('cifa_auth_token')
   router.push('/login')
 }
+
+const closeMobileMenu = () => {
+  isMobileMenuOpen.value = false
+}
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-slate-50 font-nunito overflow-hidden">
+  <div class="flex min-h-screen bg-slate-50 font-poppins overflow-hidden relative">
     
-    <Sidebar @logout="handleLogout" />
+    <div 
+      v-if="isMobileMenuOpen" 
+      @click="closeMobileMenu"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+    ></div>
 
-    <main class="flex-1 ml-64 p-6 flex flex-col h-screen overflow-hidden">
+    <Sidebar 
+      :is-open="isMobileMenuOpen" 
+      @close="closeMobileMenu" 
+      @logout="handleLogout" 
+    />
+
+    <main class="flex-1 flex flex-col h-screen overflow-hidden w-full lg:ml-64 transition-all duration-300 bg-slate-50">
       
-      <header 
-        v-if="route.path === '/admin/dashboard'" 
-        class="flex justify-between items-start mb-4"
-      >
-        <div class="animate-in fade-in slide-in-from-left duration-500">
-          <h2 class="text-2xl font-bold text-slate-900 tracking-tight leading-none mb-1.5">Olá, Vinicius!</h2>
-          <p class="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]">14 de abril de 2026</p>
+      <div class="lg:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 shrink-0 shadow-sm z-30">
+        <div class="flex items-center gap-3 select-none">
+          <h1 class="text-3xl font-bold tracking-wider text-[#0A102E]">CIFA</h1>
+          <div class="text-[0.6rem] leading-tight text-slate-500 font-medium uppercase tracking-tighter">
+            <p>Controle Inteligente</p>
+            <p>de Fluxo Acadêmico</p>
+          </div>
         </div>
-      </header>
-      
-      <section class="flex-1 min-h-0 flex flex-col relative">
-        <RouterView v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </RouterView>
+        <Button variant="ghost" size="icon" @click="isMobileMenuOpen = true" class="rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+          <Menu class="w-6 h-6 text-[#0A102E]" />
+        </Button>
+      </div>
+
+      <section class="flex-1 min-h-0 flex flex-col relative p-4 md:p-6 overflow-hidden">
+        
+        <header 
+          v-if="route.path === '/admin/dashboard'" 
+          class="flex justify-between items-start mb-4 shrink-0"
+        >
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight leading-none mb-1.5">Olá, Vinícius!</h2>
+            <p class="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]">Visão Geral Diária</p>
+          </div>
+        </header>
+
+        <RouterView />
       </section>
       
     </main>
@@ -44,47 +73,14 @@ const handleLogout = () => {
 </template>
 
 <style>
-/* Importação da fonte Nunito via Google Fonts caso não esteja no CSS global */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');
 
-.font-nunito {
-  font-family: 'Nunito', sans-serif;
-}
+.font-poppins { font-family: 'Poppins', sans-serif; }
+html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; -webkit-font-smoothing: antialiased; }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  height: 100%;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Transição suave entre telas */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* Custom Scrollbar Global para manter estética Liquid */
-::-webkit-scrollbar {
-  width: 5px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #cbd5e1;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 20px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+button, input, select { font-family: inherit; }
 </style>
