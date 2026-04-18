@@ -7,6 +7,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import br.edu.fatecpg.cifa.R
+import com.google.firebase.analytics.FirebaseAnalytics
 
 class PerfilActivity : AppCompatActivity() {
 
@@ -29,6 +30,13 @@ class PerfilActivity : AppCompatActivity() {
         btnHorarios.setOnClickListener {
             Toast.makeText(this, "Abrir horários", Toast.LENGTH_SHORT).show()
 
+            val firebaseAnalytics = FirebaseAnalytics.getInstance(this)
+
+            val bundle = Bundle().apply {
+                putString("tela", "MainActivity")
+            }
+
+            firebaseAnalytics.logEvent("teste_evento", bundle)
 
         }
 
