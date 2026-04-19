@@ -11,6 +11,8 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import br.edu.fatecpg.cifa.model.Aluno
 
+
+
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,8 +30,8 @@ class MainActivity : AppCompatActivity() {
             val aluno = Aluno(raTexto, senhaTexto)
 
             if (aluno.ra == "123" && aluno.senha == "12345") {
-                val intent = Intent(this, QrcodeActivity::class.java)
-                intent.putExtra("NOME_ALUNO", "Fábio") // Passando o nome do aluno
+                val intent = Intent(this, PerfilActivity::class.java)
+                intent.putExtra("NOME_ALUNO", "Fábio")
                 startActivity(intent)
             }
             else if (raTexto.isEmpty() && senhaTexto.isEmpty()){
