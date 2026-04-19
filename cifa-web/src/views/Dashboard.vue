@@ -5,7 +5,6 @@ import { User, UserCheck, UserX, FileText } from 'lucide-vue-next'
 
 const kpiData = { total: 1248, autorizados: 1190, negados: 58 }
 
-// Estados reativos para a animação dos números
 const animatedKpis = ref({ total: 0, autorizados: 0, negados: 0 })
 const isMounted = ref(false)
 
@@ -33,7 +32,6 @@ const getOffset = (index: number) => {
   return -(accumulatedValue / 100) * circumference 
 }
 
-// Função para animar os números subindo
 const animateValue = (target: number, key: keyof typeof animatedKpis.value, duration = 1500) => {
   let startTimestamp: number | null = null;
   const step = (timestamp: number) => {
@@ -155,5 +153,4 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* O Hover no svg foi passado para classe Tailwind (hover:brightness-125) para evitar conflitos de transição */
 </style>

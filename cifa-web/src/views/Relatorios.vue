@@ -33,7 +33,6 @@ interface AccessLog {
   type: 'Entrada' | 'Saída'
 }
 
-// Estados de Filtro e Paginação
 const searchQuery = ref('')
 const isFilterDialogOpen = ref(false)
 const currentPage = ref(1)
@@ -46,7 +45,6 @@ const filters = ref({
   timeType: 'todos'
 })
 
-// Banco de dados robusto (20 registros variados para teste)
 const mockLogs = ref<AccessLog[]>([
   { id: 'LOG-001', timestamp: new Date(2026, 3, 14, 18, 45), studentId: 1, studentName: 'Leonardo Mendonça', avatar: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200&fit=crop', period: 'Noturno', course: 'DSM', status: 'Autorizado', type: 'Entrada' },
   { id: 'LOG-002', timestamp: new Date(2026, 3, 14, 18, 42), studentId: 5, studentName: 'Carlos Eduardo Santos', avatar: 'https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?q=80&w=200&fit=crop', period: 'Noturno', course: 'DSM', status: 'Negado', type: 'Entrada' },
@@ -72,16 +70,14 @@ const mockLogs = ref<AccessLog[]>([
 
 const filteredLogs = computed(() => {
   return mockLogs.value.filter(log => {
-    // 1. Busca Global (ID ou Nome)
+
     const matchesSearch = log.studentName.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
                           log.id.toLowerCase().includes(searchQuery.value.toLowerCase())
     
-    // 2. Filtros de Categoria
     const matchesPeriod = filters.value.period === 'todos' || log.period === filters.value.period
     const matchesStatus = filters.value.status === 'todos' || log.status === filters.value.status
     const matchesCourse = filters.value.course === 'todos' || log.course === filters.value.course
 
-    // 3. Filtro de Tempo Preciso
     let matchesTime = true
     const logDate = new Date(log.timestamp)
     const today = new Date()
@@ -99,7 +95,6 @@ const filteredLogs = computed(() => {
   })
 })
 
-// Paginação
 const totalPages = computed(() => Math.ceil(filteredLogs.value.length / itemsPerPage) || 1)
 const paginatedLogs = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
@@ -121,12 +116,10 @@ const hasActiveFilters = computed(() => {
          filters.value.course !== 'todos' || filters.value.timeType !== 'todos'
 })
 
-// Navegação para tela de estudantes
 const goToStudent = (studentId: number) => {
   router.push({ path: '/admin/estudantes', query: { id: studentId } })
 }
 
-// Exportações
 const exportToCSV = () => {
   if (filteredLogs.value.length === 0) return
   const headers = ['ID', 'Data', 'Estudante', 'Periodo', 'Curso', 'Status']

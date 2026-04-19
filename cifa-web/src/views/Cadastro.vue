@@ -22,7 +22,6 @@ import { useToast } from '@/components/ui/toast/use-toast'
 const router = useRouter()
 const { toast } = useToast()
 
-// Estado do Formulário
 const isSubmitting = ref(false)
 const studentForm = ref({
   id: Date.now(),
@@ -35,9 +34,7 @@ const studentForm = ref({
   avatar: ''
 })
 
-// Função de Validação e Persistência
 const handleSubmit = async () => {
-  // Validação rigorosa dos campos
   if (!studentForm.value.name || !studentForm.value.registration || !studentForm.value.course || !studentForm.value.period) {
     toast({
       title: "Erro de Validação",
@@ -50,10 +47,8 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
-    // Simulação de latência de rede para feedback visual da animação
     await new Promise(resolve => setTimeout(resolve, 800))
     
-    // Lógica de persistência local para teste funcional no frontend
     const existingData = JSON.parse(localStorage.getItem('cifa_students') || '[]')
     
     existingData.push({ 
@@ -68,7 +63,6 @@ const handleSubmit = async () => {
       description: `O perfil de ${studentForm.value.name} foi armazenado com sucesso no banco de dados.`,
     })
 
-    // Limpeza do formulário mantendo a estrutura reativa intacta
     studentForm.value = {
       id: Date.now(),
       name: '',
