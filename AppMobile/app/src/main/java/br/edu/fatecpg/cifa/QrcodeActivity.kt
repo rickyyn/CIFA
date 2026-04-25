@@ -43,12 +43,6 @@ class QrcodeActivity : AppCompatActivity() {
         tvNome.text = "Bem-vindo, $nomeAluno"
         tvNome.setTextColor(getColor(R.color.white))
 
-        val btnVoltar = findViewById<ImageView>(R.id.btnVoltar)
-
-        btnVoltar.setOnClickListener {
-            finish()
-        }
-
 
         val formato = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         formato.timeZone = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
@@ -117,7 +111,5 @@ class QrcodeActivity : AppCompatActivity() {
         layoutParams.screenBrightness = valor
         window.attributes = layoutParams
     }
-
-
 
 }
