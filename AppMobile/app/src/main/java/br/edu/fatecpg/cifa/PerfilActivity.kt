@@ -76,11 +76,11 @@ class PerfilActivity : AppCompatActivity() {
                 val auth = FirebaseAuth.getInstance()
 
 
-                tvNome.text = "Nome: $nome"
-                tvRa.text = "RA: $ra"
+                tvNome.text = "$nome"
+                tvRa.text = "Registo do Aluno: $ra"
                 tvCiclo.text = "Ciclo: $ciclo"
-                tvStatus.text = if (ativo) "Status: ATIVO" else "Status: INATIVO"
-                tvStatus.setTextColor(if (ativo) Color.GREEN else Color.RED)
+                tvStatus.text = if (ativo) "Matricula: Ativa" else "Status: Inativa"
+
 
 
                 if (!imageUrl.isNullOrEmpty()) {
