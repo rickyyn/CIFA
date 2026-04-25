@@ -7,6 +7,23 @@
     android:background="@drawable/novo_projeto__3_">
 
 
+    <TextView
+        android:id="@+id/btnVoltar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="24dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:minWidth="48dp"
+        android:minHeight="48dp"
+        android:text="Sair"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <LinearLayout
         android:id="@+id/cardPerfil"
         android:layout_width="0dp"
@@ -24,7 +41,7 @@
             android:id="@+id/tvNome"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Vinícius Lucas de Andrade"
+            android:text=""
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#000"/>
@@ -38,12 +55,22 @@
             android:layout_marginTop="4dp"/>
 
         <TextView
+            android:id="@+id/tvRa"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Registro do Aluno (RA): 1291392422006"
+            android:text="RA: --------"
             android:background="@drawable/bg_input"
             android:padding="12dp"
             android:layout_marginTop="16dp"/>
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Status: ..."
+            android:background="@drawable/bg_input"
+            android:padding="12dp"
+            android:layout_marginTop="8dp"/>
 
         <LinearLayout
 
@@ -53,6 +80,7 @@
             android:layout_marginTop="12dp">
 
             <TextView
+                android:id="@+id/tvCiclo"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -139,7 +167,7 @@
         android:background="@drawable/bg_circle"
         android:clipToOutline="true"
         android:scaleType="centerCrop"
-        android:src="@drawable/_562fcdb492bec21c5b6698dff45e4ff961a0d89"
+        android:src="@drawable/img_perfil"
         android:elevation="12dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>

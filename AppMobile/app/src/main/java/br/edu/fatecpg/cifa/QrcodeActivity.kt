@@ -1,67 +1,110 @@
 package br.edu.fatecpg.cifa
 
-import android.graphics.Color
+import android.content.Intent
 import android.os.Bundle
 import android.os.Looper
-import android.view.animation.AlphaAnimation
 import android.widget.Button
-import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.gson.Gson
 import com.google.zxing.BarcodeFormat
-import com.google.zxing.EncodeHintType
 import com.journeyapps.barcodescanner.BarcodeEncoder
-import java.util.logging.Handler
-import qrcode.QRCode
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
+import com.bumptech.glide.Glide
+import com.google.firebase.firestore.FirebaseFirestore
 
 class QrcodeActivity : AppCompatActivity() {
+
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_qrcode)
 
         val handler = android.os.Handler(Looper.getMainLooper())
-        var runnable: Runnable? = null
-        val tempoIntervalo = 30000L
         val handlerTempo = android.os.Handler(Looper.getMainLooper())
+
         var tempoRestante = 30
-        var runnableTempo: Runnable? = null
+
+        val imgFoto = findViewById<ImageView>(R.id.imgFoto)
+
+        val uid = intent.getStringExtra("UID")
+
+        if (uid.isNullOrEmpty()) {
+            Toast.makeText(this, "UID inválido", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        FirebaseFirestore.getInstance()
+            .collection("Alunos")
+            .document(uid)
+            .get()
+            .addOnSuccessListener { doc ->
+
+                val imageUrl = doc.getString("imageUrl")
+
+                if (!imageUrl.isNullOrEmpty()) {
+                    Glide.with(this)
+                        .load(imageUrl)
+                        .into(imgFoto)
+                }
+            }
+
 
         val tempo = findViewById<TextView>(R.id.edt_tempo)
         val ivQrCode = findViewById<ImageView>(R.id.ivQrCode)
-        val tvNome = findViewById<TextView>(R.id.textView2)
+        val tvNome = findViewById<TextView>(R.id.tvNomeUsuario)
+        val btnVoltar = findViewById<TextView>(R.id.btnVoltar)
+
+
+
+        btnVoltar.setOnClickListener {
+            finish()
+        }
+
+
 
         val nomeAluno = intent.getStringExtra("NOME_ALUNO") ?: "Estudante"
-        tvNome.text = "Bem-vindo, $nomeAluno"
-        tvNome.setTextColor(getColor(R.color.white))
+        val raAluno = intent.getStringExtra("RA_ALUNO") ?: "000000"
+
+        println("RA RECEBIDO: $raAluno")
+
+        tvNome.text = "$nomeAluno"
+
 
 
         val formato = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        formato.timeZone = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
+        formato.timeZone = TimeZone.getTimeZone("America/Sao_Paulo")
 
-        fun gerarQrcode(){
+        fun gerarQrcode() {
             try {
                 val expiraEmMillis = System.currentTimeMillis() + 30000
                 val dataFormatada = formato.format(Date(expiraEmMillis))
 
                 val dados = mapOf(
+                    "ra" to raAluno,
                     "nome" to nomeAluno,
-                    "idade" to 20,
                     "expira_em" to dataFormatada
                 )
 
-                val jsonParaQr = Gson().toJson(dados)
+                val json = Gson().toJson(dados)
 
-                val barcodeEncoder = BarcodeEncoder()
-                val bitmap = barcodeEncoder.encodeBitmap(jsonParaQr, BarcodeFormat.QR_CODE, 400, 400)
+                val bitmap = BarcodeEncoder().encodeBitmap(
+                    json,
+                    BarcodeFormat.QR_CODE,
+                    400,
+                    400
+                )
+
                 ivQrCode.setImageBitmap(bitmap)
 
             } catch (e: Exception) {
@@ -69,10 +112,10 @@ class QrcodeActivity : AppCompatActivity() {
             }
         }
 
-        runnableTempo = object : Runnable {
-            override fun run() {
-                tempo.setText("${tempoRestante}s")
 
+        val runnableTempo = object : Runnable {
+            override fun run() {
+                tempo.text = "${tempoRestante}s"
                 tempoRestante--
 
                 if (tempoRestante < 0) {
@@ -83,33 +126,33 @@ class QrcodeActivity : AppCompatActivity() {
             }
         }
 
-        handlerTempo.post(runnableTempo!!)
+        handlerTempo.post(runnableTempo)
 
-        runnable = object : Runnable {
+
+        val runnable = object : Runnable {
             override fun run() {
-                try {
-                    gerarQrcode()
-                    handler.postDelayed(this, 30000)
-                } catch (e: Exception) { e.printStackTrace() }
+                gerarQrcode()
+                handler.postDelayed(this, 30000)
             }
         }
-        handler.post(runnable!!)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        handler.post(runnable)
+
+//        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+//            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+//            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+//            insets
+//        }
     }
 
     override fun onPause() {
         super.onPause()
         ajustarBrilho(-1.0f)
     }
-    private fun ajustarBrilho(valor: Float) {
-        val layoutParams = window.attributes
-        layoutParams.screenBrightness = valor
-        window.attributes = layoutParams
-    }
 
+    private fun ajustarBrilho(valor: Float) {
+        val params = window.attributes
+        params.screenBrightness = valor
+        window.attributes = params
+    }
 }
