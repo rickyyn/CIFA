@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.webkit.WebView
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -39,6 +40,7 @@ class PerfilActivity : AppCompatActivity() {
             }
         }
     }
+    private var curso: String? = null
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,11 +55,18 @@ class PerfilActivity : AppCompatActivity() {
         val btnHorarios = findViewById<LinearLayout>(R.id.btnHorarios)
         val btnQr = findViewById<LinearLayout>(R.id.btnQr)
         val btnVoltar = findViewById<TextView>(R.id.btnVoltar)
+        val tvCurso = findViewById<TextView>(R.id.tvCurso)
+        val tvTurno = findViewById<TextView>(R.id.tvTurno)
+
+
+
+
 
         uid = FirebaseAuth.getInstance().currentUser?.uid ?: run {
             finish()
             return
         }
+
 
 
         btnVoltar.setOnClickListener {
@@ -74,13 +83,25 @@ class PerfilActivity : AppCompatActivity() {
                 val ciclo = doc.get("ciclo_atual") ?: "N/A"
                 val imageUrl = doc.getString("imageUrl")
                 val auth = FirebaseAuth.getInstance()
+                curso = doc.getString("id_curso")?.trim()?.uppercase()
+
+                btnHorarios.isEnabled = true
+
 
 
                 tvNome.text = "$nome"
                 tvRa.text = "Registo do Aluno: $ra"
                 tvCiclo.text = "Ciclo: $ciclo"
                 tvStatus.text = if (ativo) "Matricula: Ativa" else "Status: Inativa"
+                tvCurso.text = "Curso: $curso"
 
+                when (curso) {
+                    "DSM" -> tvTurno.text = "Turno: Vespertino"
+                    "ADS" -> tvTurno.text ="Turno: Noturno"
+                    "GE" -> tvTurno.text ="Turno: Matutino"
+                    "COMEX" -> tvTurno.text ="Turno: Noturno"
+                    "PQ" -> tvTurno.text = "Turno: Matutino"
+                }
 
 
                 if (!imageUrl.isNullOrEmpty()) {
@@ -101,7 +122,20 @@ class PerfilActivity : AppCompatActivity() {
             val intent = Intent(Intent.ACTION_PICK).apply { type = "image/*" }
             pickImageLauncher.launch(intent)
         }
+        btnHorarios.setOnClickListener {
+            val c = curso
+
+            if (c.isNullOrEmpty()) {
+                Toast.makeText(this, "Curso ainda não carregou", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val intent = Intent(this, HorariosActivity::class.java)
+            intent.putExtra("CURSO", c)
+            startActivity(intent)
+        }
     }
+
 
     private fun createTempFileFromUri(uri: Uri): File? {
         return try {
