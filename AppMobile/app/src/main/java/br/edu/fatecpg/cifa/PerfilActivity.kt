@@ -81,7 +81,7 @@ class PerfilActivity : AppCompatActivity() {
                 val ra = doc.get("ra")?.toString() ?: "000000"
                 val ativo = doc.getBoolean("status_ativo") ?: false
                 val ciclo = doc.get("ciclo_atual") ?: "N/A"
-                val imagemUrl = doc.getString("imagemUrl")
+                val imagemUrl = doc.getString("imagem_url")
                 val auth = FirebaseAuth.getInstance()
                 curso = doc.getString("id_curso")?.trim()?.uppercase()
 

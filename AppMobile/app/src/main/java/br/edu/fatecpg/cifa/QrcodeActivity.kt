@@ -50,11 +50,11 @@ class QrcodeActivity : AppCompatActivity() {
             .get()
             .addOnSuccessListener { doc ->
 
-                val imageUrl = doc.getString("imageUrl")
+                val imagemUrl = doc.getString("imagem_url")
 
-                if (!imageUrl.isNullOrEmpty()) {
+                if (!imagemUrl.isNullOrEmpty()) {
                     Glide.with(this)
-                        .load(imageUrl)
+                        .load(imagemUrl)
                         .into(imgFoto)
                 }
             }
