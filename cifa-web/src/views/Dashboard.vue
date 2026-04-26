@@ -4,8 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { User, UserCheck, UserX, FileText } from 'lucide-vue-next'
 
 const kpiData = { total: 1248, autorizados: 1190, negados: 58 }
-
-// Estados reativos para a animação dos números
 const animatedKpis = ref({ total: 0, autorizados: 0, negados: 0 })
 const isMounted = ref(false)
 
@@ -21,7 +19,6 @@ const doughnutData = [
   { label: 'OUTROS', value: 10, color: '#00C4FF' },
 ]
 
-const hoveredSegment = ref<{ label: string, value: number, color: string } | null>(null)
 const radius = 35
 const circumference = 2 * Math.PI * radius 
 
@@ -33,7 +30,6 @@ const getOffset = (index: number) => {
   return -(accumulatedValue / 100) * circumference 
 }
 
-// Função para animar os números subindo
 const animateValue = (target: number, key: keyof typeof animatedKpis.value, duration = 1500) => {
   let startTimestamp: number | null = null;
   const step = (timestamp: number) => {
@@ -47,7 +43,7 @@ const animateValue = (target: number, key: keyof typeof animatedKpis.value, dura
 }
 
 onMounted(() => {
-  setTimeout(() => { isMounted.value = true }, 100) // Trigger para os gráficos crescerem
+  setTimeout(() => { isMounted.value = true }, 100)
   animateValue(kpiData.total, 'total');
   animateValue(kpiData.autorizados, 'autorizados');
   animateValue(kpiData.negados, 'negados');
@@ -55,51 +51,58 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex-1 flex flex-col gap-4 min-h-0">
+  <div class="flex flex-col gap-4 pb-10">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       
       <Card class="bg-[#0A102E] text-white border-none rounded-2xl shadow-lg">
-        <CardContent class="p-4 flex flex-col justify-between h-24 md:h-28">
+        <CardContent class="p-4 flex flex-col justify-between h-28">
           <div class="flex items-center gap-2.5">
-            <User class="w-4 h-4 md:w-5 md:h-5 text-slate-300 opacity-70" />
+            <User class="w-5 h-5 text-slate-300 opacity-70" />
             <h3 class="font-semibold text-sm opacity-80 tracking-wide">Total de acessos</h3>
           </div>
-          <p class="text-2xl md:text-3xl font-bold">{{ animatedKpis.total.toLocaleString('pt-BR') }}</p>
+          <p class="text-3xl font-bold">{{ animatedKpis.total.toLocaleString('pt-BR') }}</p>
         </CardContent>
       </Card>
       
       <Card class="bg-[#0A102E] text-white border-none rounded-2xl shadow-lg">
-        <CardContent class="p-4 flex flex-col justify-between h-24 md:h-28">
+        <CardContent class="p-4 flex flex-col justify-between h-28">
           <div class="flex items-center gap-2.5">
-            <UserCheck class="w-4 h-4 md:w-5 md:h-5 text-slate-300 opacity-70" />
+            <UserCheck class="w-5 h-5 text-slate-300 opacity-70" />
             <h3 class="font-semibold text-sm opacity-80 tracking-wide">Acessos autorizados</h3>
           </div>
-          <p class="text-2xl md:text-3xl font-bold">{{ animatedKpis.autorizados.toLocaleString('pt-BR') }}</p>
+          <p class="text-3xl font-bold">{{ animatedKpis.autorizados.toLocaleString('pt-BR') }}</p>
         </CardContent>
       </Card>
 
       <Card class="bg-[#FF3B3B] text-white border-none rounded-2xl shadow-lg">
-        <CardContent class="p-4 flex flex-col justify-between h-24 md:h-28">
+        <CardContent class="p-4 flex flex-col justify-between h-28">
           <div class="flex items-center gap-2.5">
-            <UserX class="w-4 h-4 md:w-5 md:h-5 text-white/80" />
+            <UserX class="w-5 h-5 text-white/80" />
             <h3 class="font-semibold text-sm opacity-90 tracking-wide">Acessos negados</h3>
           </div>
-          <p class="text-2xl md:text-3xl font-bold">{{ animatedKpis.negados }}</p>
+          <p class="text-3xl font-bold">{{ animatedKpis.negados }}</p>
         </CardContent>
       </Card>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       
-      <Card class="lg:col-span-2 bg-[#0A102E] border-none rounded-2xl shadow-xl flex flex-col h-full">
+      <Card class="lg:col-span-2 bg-[#0A102E] border-none rounded-2xl shadow-xl flex flex-col h-72 lg:h-auto">
         <CardHeader class="flex flex-row items-center gap-2 space-y-0 p-4 pb-1">
           <FileText class="w-4 h-4 text-slate-300" />
           <CardTitle class="text-base font-bold text-white tracking-wide">Acessos da semana</CardTitle>
         </CardHeader>
-        <CardContent class="flex-1 flex flex-col p-4 pt-0 min-h-0">
-          <div class="flex-1 w-full flex items-end justify-between px-1 md:px-2 min-h-0 mt-2">
-            <div v-for="(item, index) in barChartData" :key="index" class="h-full flex flex-col items-center justify-end gap-1 w-full group">
-              <span class="text-white text-[10px] md:text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">{{ item.value }}</span>
+        <CardContent class="flex-1 flex flex-col p-4 pt-0">
+          <div class="flex-1 w-full flex items-end justify-between px-1 md:px-2 mt-2">
+            <div 
+              v-for="(item, index) in barChartData" 
+              :key="index" 
+              class="h-full flex flex-col items-center justify-end gap-1 w-full"
+            >
+              <span class="text-white text-[10px] md:text-xs font-bold pb-0.5">
+                {{ item.value }}
+              </span>
+              
               <div class="relative flex-1 flex items-end w-6 md:w-10">
                 <div 
                   class="w-full bg-white rounded-t-md transition-all duration-[1500ms] ease-out hover:bg-slate-300" 
@@ -112,9 +115,10 @@ onMounted(() => {
         </CardContent>
       </Card>
 
-      <Card class="bg-[#0A102E] border-none rounded-2xl shadow-xl flex flex-col h-full">
-        <CardContent class="flex-1 flex flex-col items-center justify-center p-4 min-h-0">
-          <div class="relative w-full max-w-[120px] md:max-w-[140px] aspect-square mb-3">
+      <Card class="bg-[#0A102E] border-none rounded-2xl shadow-xl flex flex-col p-6">
+        <CardContent class="flex-1 flex flex-col items-center justify-center p-0">
+          
+          <div class="relative w-full max-w-[140px] aspect-square mb-6">
             <svg viewBox="0 0 100 100" class="w-full h-full transform -rotate-90 overflow-visible">
               <circle 
                 v-for="(segment, index) in doughnutData" 
@@ -122,38 +126,28 @@ onMounted(() => {
                 cx="50" cy="50" r="35" fill="none" :stroke="segment.color" stroke-width="25" 
                 :stroke-dasharray="getDashArray(segment.value)" 
                 :stroke-dashoffset="isMounted ? getOffset(index) : circumference" 
-                class="transition-all duration-[1500ms] ease-out cursor-pointer hover:brightness-125"
-                @mouseenter="hoveredSegment = segment"
-                @mouseleave="hoveredSegment = null"
+                class="transition-all duration-[1500ms] ease-out"
               ></circle>
               <circle cx="50" cy="50" r="22" fill="#0A102E"></circle>
             </svg>
             <div class="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-              <template v-if="hoveredSegment">
-                <span class="text-white text-sm md:text-base font-bold transition-colors" :style="{ color: hoveredSegment.color }">
-                  {{ hoveredSegment.value }}%
-                </span>
-                <span class="text-slate-300 text-[0.6rem] font-bold uppercase tracking-widest opacity-80 mt-0.5">{{ hoveredSegment.label }}</span>
-              </template>
-              <template v-else>
-                <span class="text-white text-[0.6rem] font-bold uppercase tracking-widest opacity-50">Cursos</span>
-              </template>
+              <span class="text-white text-[0.6rem] font-bold uppercase tracking-widest opacity-50">Cursos</span>
             </div>
           </div>
 
-          <div class="w-full grid grid-cols-2 gap-y-2 gap-x-1 px-1 mt-auto">
-            <div v-for="item in doughnutData" :key="item.label" class="flex items-center gap-1.5">
-              <div class="w-2 h-2 rounded-full shadow-sm" :style="{ backgroundColor: item.color }"></div>
-              <span class="text-slate-300 text-[10px] md:text-xs font-bold tracking-tight">{{ item.label }}</span>
+          <div class="w-full grid grid-cols-2 gap-y-3 gap-x-2">
+            <div v-for="item in doughnutData" :key="item.label" class="flex items-center gap-2">
+              <div class="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" :style="{ backgroundColor: item.color }"></div>
+              <div class="flex items-baseline gap-1.5 truncate">
+                <span class="text-slate-300 text-xs font-bold tracking-tight">{{ item.label }}</span>
+                <span class="text-white text-xs font-black">{{ item.value }}%</span>
+              </div>
             </div>
           </div>
+
         </CardContent>
       </Card>
 
     </div>
   </div>
 </template>
-
-<style scoped>
-/* O Hover no svg foi passado para classe Tailwind (hover:brightness-125) para evitar conflitos de transição */
-</style>

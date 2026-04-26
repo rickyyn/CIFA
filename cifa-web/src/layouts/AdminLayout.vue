@@ -9,7 +9,11 @@ import { Button } from '@/components/ui/button'
 const router = useRouter()
 const route = useRoute()
 
+// Controlo do menu mobile (abrir/fechar)
 const isMobileMenuOpen = ref(false)
+
+// NOVO: Controlo da Sidebar minimizada (Desktop)
+const isSidebarCollapsed = ref(false)
 
 const handleLogout = () => {
   localStorage.removeItem('cifa_auth_token')
@@ -19,10 +23,14 @@ const handleLogout = () => {
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false
 }
+
+const toggleSidebar = () => {
+  isSidebarCollapsed.value = !isSidebarCollapsed.value
+}
 </script>
 
 <template>
-  <div class="flex min-h-[100dvh] bg-slate-50 font-poppins overflow-hidden relative">
+  <div class="flex min-h-[100dvh] bg-slate-50 font-poppins overflow-hidden relative text-slate-900">
     
     <div 
       v-if="isMobileMenuOpen" 
@@ -32,11 +40,18 @@ const closeMobileMenu = () => {
 
     <Sidebar 
       :is-open="isMobileMenuOpen" 
+      :is-collapsed="isSidebarCollapsed"
       @close="closeMobileMenu" 
       @logout="handleLogout" 
+      @toggle-collapse="toggleSidebar"
     />
 
-    <main class="flex-1 flex flex-col h-[100dvh] overflow-hidden w-full lg:ml-64 transition-all duration-300 bg-slate-50">
+    <main 
+      class="flex-1 flex flex-col h-[100dvh] overflow-hidden w-full transition-all duration-300 bg-slate-50"
+      :class="[
+        isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+      ]"
+    >
       
       <div class="lg:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 shrink-0 shadow-sm z-30">
         <div class="flex items-center gap-3 select-none">
@@ -46,7 +61,7 @@ const closeMobileMenu = () => {
             <p>de Fluxo Acadêmico</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" @click="isMobileMenuOpen = true" class="rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+        <Button variant="ghost" size="icon" @click="isMobileMenuOpen = true" class="rounded-xl bg-slate-50 hover:bg-slate-100">
           <Menu class="w-6 h-6 text-[#0A102E]" />
         </Button>
       </div>
@@ -57,7 +72,7 @@ const closeMobileMenu = () => {
           v-if="route.path === '/admin/dashboard'" 
           class="flex justify-between items-start mb-4 shrink-0"
         >
-          <div>
+          <div v-auto-animate>
             <h2 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight leading-none mb-1.5">Olá, Vinícius!</h2>
             <p class="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]">Visão Geral Diária</p>
           </div>
@@ -82,5 +97,4 @@ html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; -webkit-font
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
 .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #94a3b8; }
-button, input, select { font-family: inherit; }
 </style>

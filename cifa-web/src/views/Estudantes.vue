@@ -1,17 +1,28 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, Filter, Download, FileText, FileSpreadsheet } from 'lucide-vue-next'
+import { 
+  Search, 
+  Filter, 
+  Download, 
+  FileText, 
+  FileSpreadsheet,
+  GraduationCap,
+  CalendarDays,
+  Contact2,
+  Hash,
+  ChevronRight,
+  Users2,
+  Loader2 
+} from 'lucide-vue-next'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   Select,
@@ -26,9 +37,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
 
 const route = useRoute()
+const router = useRouter()
 
 interface Student {
   id: number
@@ -39,12 +51,29 @@ interface Student {
   contact: string
   avatar: string
   status: 'Ativo' | 'Inativo' | 'Bloqueado' | 'Visitante'
+  semester: number
 }
 
 const allStudents = ref<Student[]>([])
 const searchQuery = ref('')
 const selectedStudent = ref<Student | null>(null)
-const isDialogOpen = ref(false)
+const isDetailModalOpen = ref(false)
+const isFilterDialogOpen = ref(false)
+const isLoadingData = ref(true) 
+
+type TabType = 'todos' | 1 | 2 | 3 | 4 | 5 | 6 | 'inativos'
+const activeTab = ref<TabType>('todos')
+
+const tabs: { id: TabType, label: string }[] = [
+  { id: 'todos', label: 'Todos' },
+  { id: 1, label: '1º Semestre' },
+  { id: 2, label: '2º Semestre' },
+  { id: 3, label: '3º Semestre' },
+  { id: 4, label: '4º Semestre' },
+  { id: 5, label: '5º Semestre' },
+  { id: 6, label: '6º Semestre' },
+  { id: 'inativos', label: 'Inativos' }
+]
 
 const filters = ref({
   period: 'todos',
@@ -52,67 +81,130 @@ const filters = ref({
   status: 'todos'
 })
 
-const defaultStudents: Student[] = [
-  { id: 1, name: 'Leonardo Mendonça', period: 'Noturno', course: 'DSM', registration: '1460282113001', contact: 'leonardo.mendonca@fatec.sp.gov.br', avatar: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200&auto=format&fit=crop', status: 'Ativo' },
-  { id: 2, name: 'Ana Clara Souza', period: 'Matutino', course: 'ADS', registration: '1460282113042', contact: 'ana.clara.souza.longemailtest@fatec.sp.gov.br', avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=200&auto=format&fit=crop', status: 'Visitante' },
-  { id: 3, name: 'Felipe Mendes', period: 'Noturno', course: 'COMEX', registration: '1460282113088', contact: 'felipe.mendes@fatec.sp.gov.br', avatar: 'https://images.unsplash.com/photo-1474511320723-9a56873867b5?q=80&w=200&auto=format&fit=crop', status: 'Inativo' },
-  { id: 4, name: 'Beatriz Lima', period: 'Vespertino', course: 'GEEM', registration: '1460282113105', contact: '(13) 97766-3311', avatar: 'https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?q=80&w=200&auto=format&fit=crop', status: 'Bloqueado' },
-  { id: 5, name: 'Carlos Eduardo Santos', period: 'Noturno', course: 'DSM', registration: '1460282113019', contact: 'carlos.edu.santos.silva.fatec.pg@gmail.com', avatar: 'https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?q=80&w=200&auto=format&fit=crop', status: 'Ativo' },
-]
+// ==========================================
+// INTEGRAÇÃO DE API (JSONPlaceholder + DiceBear)
+// ==========================================
+const fetchAPIStudents = async (): Promise<Student[]> => {
+  try {
+    const response = await fetch('https://jsonplaceholder.typicode.com/users')
+    if (!response.ok) throw new Error('Falha na comunicação com a API')
+    
+    const data = await response.json()
+    
+    return data.map((user: any) => ({
+      id: user.id,
+      name: user.name,
+      period: user.id % 2 === 0 ? 'Noturno' : 'Matutino',
+      course: user.id % 3 === 0 ? 'DSM' : (user.id % 2 === 0 ? 'ADS' : 'COMEX'),
+      registration: `1460282113${user.id.toString().padStart(3, '0')}`,
+      contact: user.email.toLowerCase(),
+      
+      // ============================================================
+      // SOLUÇÃO: Novos Avatares Ilustrados (DiceBear - Avataaars)
+      // Usamos o nome como 'seed' para gerar um rosto único e consistente
+      // ============================================================
+      avatar: `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(user.name)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
+      
+      status: user.id % 4 === 0 ? 'Inativo' : 'Ativo',
+      semester: (user.id % 6) + 1
+    }))
+  } catch (error) {
+    console.error("Erro ao buscar dados externos:", error)
+    return [] 
+  }
+}
 
-const loadStudents = () => {
+const loadStudents = async () => {
+  isLoadingData.value = true
+  const apiStudents = await fetchAPIStudents()
   const storedData = localStorage.getItem('cifa_students')
   const persistedStudents = storedData ? JSON.parse(storedData) : []
-  allStudents.value = [...defaultStudents, ...persistedStudents]
+  
+  // Garante que alunos persistidos que não tenham avatar também ganhem um DiceBear
+  const formattedPersisted = persistedStudents.map((s: any) => ({ 
+    ...s, 
+    semester: s.semester || 1,
+    avatar: s.avatar || `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(s.name)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`
+  }))
+  
+  const deletedIds: number[] = JSON.parse(localStorage.getItem('cifa_deleted_ids') || '[]')
+  const validApiStudents = apiStudents.filter(s => !deletedIds.includes(s.id))
+
+  allStudents.value = [...validApiStudents, ...formattedPersisted].sort((a, b) => a.name.localeCompare(b.name))
+  
+  isLoadingData.value = false
+  checkUrlForStudent()
+}
+
+const checkUrlForStudent = () => {
+  const queryId = route.query.id
+  if (queryId) {
+    const student = allStudents.value.find(s => s.id === Number(queryId))
+    if (student) {
+      selectedStudent.value = student
+      isDetailModalOpen.value = true
+    }
+  }
 }
 
 onMounted(() => {
   loadStudents()
-  const queryId = route.query.id
-  if (queryId) {
-    const target = allStudents.value.find(s => s.id === Number(queryId))
-    if (target) {
-      selectedStudent.value = target
-      return
-    }
-  }
-  if (allStudents.value.length > 0) {
-    selectedStudent.value = allStudents.value[0]
-  }
+})
+
+watch(() => route.query.id, () => {
+  checkUrlForStudent()
 })
 
 const filteredStudents = computed(() => {
   return allStudents.value.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchesSearch = student.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
+                          student.registration.includes(searchQuery.value)
+    
+    let matchesTab = true
+    if (activeTab.value === 'inativos') matchesTab = student.status === 'Inativo'
+    else if (typeof activeTab.value === 'number') matchesTab = student.semester === activeTab.value
+
     const matchesPeriod = filters.value.period === 'todos' || student.period === filters.value.period
     const matchesCourse = filters.value.course === 'todos' || student.course === filters.value.course
     const matchesStatus = filters.value.status === 'todos' || student.status === filters.value.status
-    return matchesSearch && matchesPeriod && matchesCourse && matchesStatus
+    
+    return matchesSearch && matchesTab && matchesPeriod && matchesCourse && matchesStatus
   })
 })
 
-const hasActiveFilters = computed(() => filters.value.period !== 'todos' || filters.value.course !== 'todos' || filters.value.status !== 'todos')
+const getCount = (tabId: TabType) => {
+  if (tabId === 'todos') return allStudents.value.length
+  if (tabId === 'inativos') return allStudents.value.filter(s => s.status === 'Inativo').length
+  return allStudents.value.filter(s => s.semester === tabId).length
+}
 
-const clearFilters = () => {
-  filters.value.period = 'todos'
-  filters.value.course = 'todos'
-  filters.value.status = 'todos'
+const openStudentDetail = (student: Student) => {
+  selectedStudent.value = student
+  isDetailModalOpen.value = true
 }
 
 const getStatusStyle = (status: string) => {
   switch (status) {
-    case 'Ativo': return 'text-emerald-600'
-    case 'Inativo': return 'text-slate-500'
-    case 'Bloqueado': return 'text-red-600'
-    case 'Visitante': return 'text-indigo-600'
-    default: return 'text-slate-900'
+    case 'Ativo': return 'bg-emerald-100 text-emerald-700'
+    case 'Inativo': return 'bg-slate-200 text-slate-700'
+    case 'Bloqueado': return 'bg-red-100 text-red-700'
+    case 'Visitante': return 'bg-indigo-100 text-indigo-700'
+    default: return 'bg-slate-100 text-slate-700'
   }
 }
 
 const exportToCSV = () => {
   if (filteredStudents.value.length === 0) return
-  const headers = ['Nome', 'Status', 'Periodo', 'Curso', 'Matricula', 'Contato']
-  const rows = filteredStudents.value.map(s => [`"${s.name}"`, s.status, s.period, `"${s.course}"`, s.registration, `"${s.contact}"`])
+  const headers = ['Nome', 'Status', 'Semestre', 'Periodo', 'Curso', 'Matricula', 'Contato']
+  const rows = filteredStudents.value.map(s => [
+    `"${s.name}"`, 
+    s.status, 
+    `${s.semester}º`, 
+    s.period, 
+    `"${s.course}"`, 
+    s.registration, 
+    `"${s.contact}"`
+  ])
   const csvContent = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n')
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
@@ -144,11 +236,31 @@ const exportToPDF = () => {
         <h1>Relatório de Estudantes</h1>
         <p>Sistema CIFA - Emissão: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</p>
         <table>
-          <thead><tr><th>Nome</th><th>Status</th><th>Período</th><th>Curso</th><th>Matrícula</th><th>Contato</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Status</th>
+              <th>Semestre</th>
+              <th>Período</th>
+              <th>Curso</th>
+              <th>Matrícula</th>
+              <th>Contato</th>
+            </tr>
+          </thead>
           <tbody>
   `
   filteredStudents.value.forEach(s => {
-    htmlStr += `<tr><td>${s.name}</td><td>${s.status}</td><td>${s.period}</td><td>${s.course}</td><td>${s.registration}</td><td>${s.contact}</td></tr>`
+    htmlStr += `
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.status}</td>
+        <td>${s.semester}º</td>
+        <td>${s.period}</td>
+        <td>${s.course}</td>
+        <td>${s.registration}</td>
+        <td>${s.contact}</td>
+      </tr>
+    `
   })
 
   htmlStr += `</tbody></table></body></html>`
@@ -159,176 +271,227 @@ const exportToPDF = () => {
 </script>
 
 <template>
-  <div class="flex flex-1 flex-col min-h-0 gap-4 font-poppins">
+  <div class="flex flex-1 flex-col min-h-0 gap-2 font-poppins">
     
-    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 py-1">
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 py-2 shrink-0">
       <div class="flex items-center gap-3 w-full sm:w-auto">
-        
-        <div class="relative w-full sm:w-80">
+        <div class="relative w-full sm:w-96">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input 
             v-model="searchQuery"
-            placeholder="Pesquisar por nome..." 
-            class="pl-10 h-10 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0A102E] bg-white w-full transition-all text-sm outline-none shadow-sm"
+            placeholder="Pesquisar aluno por nome ou RA..." 
+            class="pl-10 h-11 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0A102E] bg-white w-full transition-all text-sm outline-none shadow-sm"
           />
         </div>
         
-        <Dialog v-model:open="isDialogOpen">
-          <DialogTrigger as-child>
-            <Button variant="outline" class="h-10 px-4 sm:px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm relative shrink-0">
-              <Filter class="w-4 h-4" />
-              <span class="hidden sm:inline">Filtros</span>
-              <span v-if="hasActiveFilters" class="absolute -top-1 -right-1 flex h-3 w-3">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-indigo-600 border border-white"></span>
-              </span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent class="rounded-[2rem] max-w-[90vw] sm:max-w-[425px] border-none shadow-2xl">
-            <DialogHeader>
-              <DialogTitle class="text-xl font-bold">Refinar Estudantes</DialogTitle>
-              <DialogDescription>Selecione os critérios para filtrar a listagem.</DialogDescription>
-            </DialogHeader>
-            <div class="grid gap-5 py-4">
-              <div class="space-y-2">
-                <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest">Status</label>
-                <Select v-model="filters.status">
-                  <SelectTrigger class="rounded-xl h-11"><SelectValue placeholder="Selecione o status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos os Status</SelectItem>
-                    <SelectItem value="Ativo">Ativo</SelectItem>
-                    <SelectItem value="Inativo">Inativo</SelectItem>
-                    <SelectItem value="Bloqueado">Bloqueado</SelectItem>
-                    <SelectItem value="Visitante">Visitante</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div class="space-y-2">
-                <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest">Período</label>
-                <Select v-model="filters.period">
-                  <SelectTrigger class="rounded-xl h-11"><SelectValue placeholder="Selecione o período" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos os Períodos</SelectItem>
-                    <SelectItem value="Matutino">Matutino</SelectItem>
-                    <SelectItem value="Vespertino">Vespertino</SelectItem>
-                    <SelectItem value="Noturno">Noturno</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div class="space-y-2">
-                <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest">Curso</label>
-                <Select v-model="filters.course">
-                  <SelectTrigger class="rounded-xl h-11"><SelectValue placeholder="Selecione o curso" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos os Cursos</SelectItem>
-                    <SelectItem value="DSM">DSM</SelectItem>
-                    <SelectItem value="ADS">ADS</SelectItem>
-                    <SelectItem value="COMEX">COMEX</SelectItem>
-                    <SelectItem value="GEEM">GEEM</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Separator />
-            <DialogFooter class="flex flex-row justify-between gap-2 pt-2">
-              <Button variant="ghost" @click="clearFilters" class="text-slate-500 hover:text-red-500 rounded-xl">Limpar Filtros</Button>
-              <Button @click="isDialogOpen = false" class="bg-[#1A1A3A] hover:bg-[#0F0F24] rounded-xl px-8 text-white">Aplicar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button variant="outline" @click="isFilterDialogOpen = true" class="h-11 px-5 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm shrink-0 font-semibold">
+          <Filter class="w-4 h-4" />
+          <span class="hidden sm:inline">Filtros</span>
+        </Button>
       </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
-          <Button :disabled="filteredStudents.length === 0" variant="outline" class="h-10 px-4 sm:px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm disabled:opacity-50 shrink-0">
+          <Button 
+            :disabled="filteredStudents.length === 0 || isLoadingData"
+            variant="outline" 
+            class="h-11 px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm shrink-0 font-semibold disabled:opacity-50"
+          >
             <Download class="w-4 h-4" /> 
-            <span class="hidden sm:inline">Exportar</span>
+            <span>Exportar Relatório</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" class="w-40 rounded-xl border-none shadow-xl">
+        <DropdownMenuContent align="end" class="w-44 rounded-xl border-none shadow-xl font-poppins">
           <DropdownMenuItem @click="exportToCSV" class="cursor-pointer gap-2 font-medium text-slate-700">
-            <FileSpreadsheet class="w-4 h-4 text-emerald-600" /> CSV
+            <FileSpreadsheet class="w-4 h-4 text-emerald-600" /> Planilha (CSV)
           </DropdownMenuItem>
           <DropdownMenuItem @click="exportToPDF" class="cursor-pointer gap-2 font-medium text-slate-700">
-            <FileText class="w-4 h-4 text-red-600" /> PDF
+            <FileText class="w-4 h-4 text-red-600" /> Documento (PDF)
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
 
-    <div class="flex flex-col lg:flex-row flex-1 gap-6 min-h-0 pb-4 overflow-y-auto lg:overflow-hidden custom-scrollbar">
+    <div class="w-full flex shrink-0 border-b border-slate-200 mt-2 mb-4 bg-slate-50/50 rounded-t-xl overflow-hidden">
+      <button
+        v-for="tab in tabs" 
+        :key="tab.id"
+        @click="activeTab = tab.id"
+        class="flex-1 min-w-0 pb-3 px-1 sm:px-2 pt-3 text-[10px] sm:text-xs lg:text-sm font-semibold transition-all duration-300 relative flex justify-center items-center gap-1.5 sm:gap-2 group overflow-hidden"
+        :class="activeTab === tab.id ? 'text-[#0A102E] bg-white' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'"
+      >
+        <span class="truncate">{{ tab.label }}</span>
+        <span 
+          class="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold transition-colors shrink-0"
+          :class="activeTab === tab.id ? 'bg-[#0A102E] text-white' : 'bg-slate-200 text-slate-500 group-hover:bg-slate-300'"
+        >
+          {{ getCount(tab.id) }}
+        </span>
+        <div 
+          v-if="activeTab === tab.id" 
+          class="absolute bottom-0 left-0 w-full h-[3px] bg-[#0A102E] rounded-t-full"
+        ></div>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto custom-scrollbar bg-white border border-slate-200 rounded-[2rem] p-4 shadow-sm relative">
       
-      <div class="w-full lg:w-[360px] flex flex-col shrink-0 h-[40vh] lg:h-auto border border-slate-200 lg:border-none rounded-[2rem] lg:rounded-none p-4 lg:p-0">
-        <h3 class="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-slate-400 mb-3 border-b border-slate-100 pb-2 ml-1">Estudantes ({{ filteredStudents.length }})</h3>
+      <div v-if="isLoadingData" class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-10 rounded-[2rem]">
+        <Loader2 class="w-10 h-10 animate-spin text-[#0A102E] mb-4" />
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-widest">Sincronizando Banco de Dados...</span>
+      </div>
+
+      <div v-auto-animate class="flex flex-col gap-3">
         
-        <div v-auto-animate class="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-          <div 
-            v-for="student in filteredStudents" 
-            :key="student.id"
-            class="flex items-center justify-between p-2.5 rounded-xl transition-all border border-transparent cursor-pointer"
-            :class="selectedStudent?.id === student.id ? 'bg-slate-100 border-slate-200 shadow-sm' : 'hover:bg-slate-50'"
-            @click="selectedStudent = student"
-          >
-            <div class="flex items-center gap-3">
-              <img :src="student.avatar" class="w-10 h-10 rounded-full object-cover bg-slate-200 shrink-0" />
-              <div class="flex flex-col overflow-hidden">
-                <span class="font-bold text-slate-700 text-sm tracking-tight leading-tight truncate">{{ student.name }}</span>
-                <span class="text-[10px] font-bold uppercase tracking-wider mt-0.5 truncate" :class="getStatusStyle(student.status)">{{ student.status }}</span>
+        <div 
+          v-for="student in filteredStudents" 
+          :key="student.id"
+          class="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all cursor-pointer bg-slate-50/50 hover:bg-white group"
+          @click="openStudentDetail(student)"
+        >
+          <div class="flex items-center gap-4">
+            <img 
+              :src="student.avatar" 
+              class="w-12 h-12 rounded-full object-cover bg-slate-100 shrink-0 border border-slate-200 group-hover:border-indigo-100 transition-colors" 
+            />
+            <div class="flex flex-col">
+              <span class="font-bold text-slate-800 text-base tracking-tight group-hover:text-indigo-950 transition-colors">{{ student.name }}</span>
+              <div class="flex items-center gap-2 mt-1 text-xs text-slate-500 font-medium">
+                <span>RA: <span class="font-mono text-slate-700">{{ student.registration }}</span></span>
+                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                <span>{{ student.course }} ({{ student.period }})</span>
               </div>
             </div>
-            <Button class="bg-[#1A1A3A] hover:bg-[#0F0F24] text-white rounded-lg px-4 h-8 text-xs font-bold transition-all active:scale-95 shrink-0 hidden sm:flex">
-              Acessar
-            </Button>
           </div>
-          <div v-if="filteredStudents.length === 0" class="text-center py-10 text-slate-400 text-xs italic">Nenhum resultado encontrado.</div>
-        </div>
-      </div>
 
-      <div class="flex-1 bg-[#EBEBEB] rounded-[2.5rem] p-6 sm:p-8 flex flex-col shadow-inner overflow-y-auto custom-scrollbar shrink-0 h-fit lg:h-auto">
-        <template v-if="selectedStudent">
-          
-          <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-8 sm:mb-10 text-center sm:text-left">
-            <img :src="selectedStudent.avatar" class="w-24 h-24 rounded-full object-cover bg-slate-200 shadow-lg border-4 border-white/50 shrink-0" />
-            <div class="flex flex-col items-center sm:items-start">
-              <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tighter leading-tight">{{ selectedStudent.name }}</h2>
-              <span class="text-xs font-bold uppercase tracking-widest mt-1" :class="getStatusStyle(selectedStudent.status)">
-                Status: {{ selectedStudent.status }}
+          <div class="flex items-center justify-between sm:justify-end gap-6 mt-4 sm:mt-0 w-full sm:w-auto border-t sm:border-none pt-4 sm:pt-0 border-slate-100">
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                {{ student.semester }}º Semestre
               </span>
+              <Badge :class="getStatusStyle(student.status)" class="border-none font-bold text-[10px] uppercase shadow-none px-3 py-1">
+                {{ student.status }}
+              </Badge>
+            </div>
+            <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-[#0A102E] group-hover:text-white transition-colors shrink-0">
+              <ChevronRight class="w-4 h-4" />
             </div>
           </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8 max-w-2xl w-full">
-            
-            <div class="flex flex-col border-l-2 border-slate-300 pl-4 py-1">
-              <span class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Período Letivo</span>
-              <span class="text-lg font-bold text-slate-800 break-words">{{ selectedStudent.period }}</span>
-            </div>
-
-            <div class="flex flex-col border-l-2 border-slate-300 pl-4 py-1">
-              <span class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Matrícula (RA)</span>
-              <span class="text-lg font-bold text-slate-800 font-mono break-words">{{ selectedStudent.registration }}</span>
-            </div>
-            
-            <div class="flex flex-col border-l-2 border-slate-300 pl-4 py-1 sm:col-span-2">
-              <span class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Curso / Formação</span>
-              <span class="text-lg font-bold text-slate-800 break-words">{{ selectedStudent.course }}</span>
-            </div>
-            
-            <div class="flex flex-col border-l-2 border-slate-300 pl-4 py-1 sm:col-span-2">
-              <span class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Informações de Contato</span>
-              <span class="text-lg font-bold text-slate-800 break-words leading-tight">{{ selectedStudent.contact }}</span>
-            </div>
-          </div>
-        </template>
-        
-        <div v-else class="flex-1 flex items-center justify-center text-slate-400 text-sm italic py-10">
-          Selecione um estudante para visualizar a ficha técnica.
         </div>
-      </div>
 
+        <div v-if="!isLoadingData && filteredStudents.length === 0" class="flex flex-col items-center justify-center py-16 text-slate-400">
+          <Users2 class="w-12 h-12 mb-4 opacity-20" />
+          <span class="text-sm font-medium italic">Nenhum aluno encontrado para os filtros e aba selecionados.</span>
+        </div>
+
+      </div>
     </div>
+
+    <Dialog v-model:open="isDetailModalOpen">
+      <DialogContent class="rounded-[2.5rem] sm:max-w-[500px] border-none shadow-2xl p-0 overflow-hidden font-poppins">
+        <div class="bg-[#0A102E] p-8 text-center relative overflow-hidden">
+          <div class="absolute -top-10 -left-10 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
+          <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl"></div>
+          
+          <div class="relative z-10 flex flex-col items-center">
+            <img :src="selectedStudent?.avatar" class="w-28 h-28 rounded-full object-cover border-4 border-white/10 bg-slate-100 shadow-2xl mb-4" />
+            <h2 class="text-2xl font-bold text-white tracking-tight leading-tight">{{ selectedStudent?.name }}</h2>
+            <Badge class="mt-2 bg-white/10 text-white border-none font-bold uppercase text-[10px] tracking-widest px-4 py-1">
+              {{ selectedStudent?.registration }}
+            </Badge>
+          </div>
+        </div>
+
+        <div class="p-8 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-white">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+              <GraduationCap class="w-5 h-5 text-slate-400" />
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Semestre Atual</span>
+              <span class="font-bold text-slate-800">{{ selectedStudent?.semester }}º Semestre</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+              <CalendarDays class="w-5 h-5 text-slate-400" />
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Período</span>
+              <span class="font-bold text-slate-800">{{ selectedStudent?.period }}</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 sm:col-span-2">
+            <div class="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+              <Hash class="w-5 h-5 text-slate-400" />
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Formação</span>
+              <span class="font-bold text-slate-800">{{ selectedStudent?.course }}</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 sm:col-span-2">
+            <div class="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+              <Contact2 class="w-5 h-5 text-slate-400" />
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Contato</span>
+              <span class="font-bold text-slate-800 break-all">{{ selectedStudent?.contact }}</span>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter class="p-6 pt-0 bg-white">
+          <Button @click="isDetailModalOpen = false" class="w-full bg-[#0A102E] hover:bg-slate-800 text-white rounded-2xl h-12 font-bold transition-all active:scale-95 shadow-lg">
+            Fechar Detalhes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="isFilterDialogOpen">
+      <DialogContent class="rounded-[2.5rem] max-w-[90vw] sm:max-w-[425px] border-none shadow-2xl font-poppins">
+        <DialogHeader>
+          <DialogTitle class="font-bold">Filtros Avançados</DialogTitle>
+        </DialogHeader>
+        <div class="grid gap-5 py-4">
+          <div class="space-y-1">
+            <label class="text-[10px] font-bold uppercase text-slate-400 ml-1">Status</label>
+            <Select v-model="filters.status">
+              <SelectTrigger class="rounded-xl h-11"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="Ativo">Ativo</SelectItem>
+                <SelectItem value="Inativo">Inativo</SelectItem>
+                <SelectItem value="Bloqueado">Bloqueado</SelectItem>
+                <SelectItem value="Visitante">Visitante</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div class="space-y-1">
+            <label class="text-[10px] font-bold uppercase text-slate-400 ml-1">Curso</label>
+            <Select v-model="filters.course">
+              <SelectTrigger class="rounded-xl h-11"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="DSM">DSM</SelectItem>
+                <SelectItem value="ADS">ADS</SelectItem>
+                <SelectItem value="COMEX">COMEX</SelectItem>
+                <SelectItem value="GEEM">GEEM</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter class="gap-2">
+          <Button variant="ghost" @click="isFilterDialogOpen = false" class="rounded-xl">Cancelar</Button>
+          <Button @click="isFilterDialogOpen = false" class="bg-[#0A102E] text-white rounded-xl px-8">Aplicar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
   </div>
 </template>
 
@@ -337,8 +500,17 @@ const exportToPDF = () => {
   font-family: 'Poppins', sans-serif;
 }
 
-.custom-scrollbar::-webkit-scrollbar { width: 6px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
-.custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #94a3b8; }
+.custom-scrollbar::-webkit-scrollbar { 
+  width: 6px; 
+}
+.custom-scrollbar::-webkit-scrollbar-track { 
+  background: transparent; 
+}
+.custom-scrollbar::-webkit-scrollbar-thumb { 
+  background-color: #cbd5e1; 
+  border-radius: 20px; 
+}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb { 
+  background-color: #94a3b8; 
+}
 </style>
