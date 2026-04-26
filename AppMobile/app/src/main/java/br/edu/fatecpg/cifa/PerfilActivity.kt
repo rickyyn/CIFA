@@ -81,7 +81,7 @@ class PerfilActivity : AppCompatActivity() {
                 val ra = doc.get("ra")?.toString() ?: "000000"
                 val ativo = doc.getBoolean("status_ativo") ?: false
                 val ciclo = doc.get("ciclo_atual") ?: "N/A"
-                val imageUrl = doc.getString("imageUrl")
+                val imagemUrl = doc.getString("imagemUrl")
                 val auth = FirebaseAuth.getInstance()
                 curso = doc.getString("id_curso")?.trim()?.uppercase()
 
@@ -92,7 +92,7 @@ class PerfilActivity : AppCompatActivity() {
                 tvNome.text = "$nome"
                 tvRa.text = "Registo do Aluno: $ra"
                 tvCiclo.text = "Ciclo: $ciclo"
-                tvStatus.text = if (ativo) "Matricula: Ativa" else "Status: Inativa"
+                tvStatus.text = if (ativo) "Matricula: Ativa" else "Matricula: Inativa"
                 tvCurso.text = "Curso: $curso"
 
                 when (curso) {
@@ -104,8 +104,8 @@ class PerfilActivity : AppCompatActivity() {
                 }
 
 
-                if (!imageUrl.isNullOrEmpty()) {
-                    Glide.with(this).load(imageUrl).into(imgPerfil)
+                if (!imagemUrl.isNullOrEmpty()) {
+                    Glide.with(this).load(imagemUrl).into(imgPerfil)
                 }
 
                 btnQr.setOnClickListener {
@@ -159,9 +159,9 @@ class PerfilActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val result = cloudinary.uploader().upload(filePath, ObjectUtils.emptyMap())
-                val imageUrl = result["secure_url"] as String
+                val imagemUrl = result["secure_url"] as String
 
-                db.collection("Alunos").document(uid).update("imageUrl", imageUrl).await()
+                db.collection("Alunos").document(uid).update("imagem_url", imagemUrl).await()
 
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@PerfilActivity, "Foto atualizada!", Toast.LENGTH_SHORT).show()

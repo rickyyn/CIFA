@@ -7,15 +7,36 @@
     android:layout_height="match_parent"
     tools:context=".HorariosActivity">
 
+
+    <TextView
+        android:id="@+id/btnVoltar"
+        android:layout_width="53dp"
+        android:layout_height="19dp"
+        android:layout_marginStart="1dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:minWidth="48dp"
+        android:minHeight="48dp"
+        android:text="Voltar"
+        android:textColor="#050505"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <WebView
         android:id="@+id/webview"
-        android:layout_width="409dp"
-        android:layout_height="match_parent"
+        android:layout_width="410dp"
+        android:layout_height="710dp"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.238">
+
+    </WebView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
