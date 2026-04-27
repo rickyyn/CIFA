@@ -13,7 +13,6 @@ public class Aluno {
 
     @DocumentId
     private String id;
-
     private String nome;
     private String email;
     private Long ra;
@@ -21,6 +20,8 @@ public class Aluno {
     private String rfid_tag;
     private boolean status_ativo;
     private boolean esta_no_campus;
+    private String imagem_url;
+    private int ciclo_atual;
     @JsonIgnore
     private Timestamp createdat;
     @JsonIgnore

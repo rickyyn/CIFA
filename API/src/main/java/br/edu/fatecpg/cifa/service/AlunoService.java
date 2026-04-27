@@ -1,10 +1,14 @@
 package br.edu.fatecpg.cifa.service;
 import br.edu.fatecpg.cifa.dto.AlunoDto;
 import br.edu.fatecpg.cifa.model.Aluno;
+import com.cloudinary.Cloudinary;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.*;
+import com.google.cloud.storage.Bucket;
 import com.google.firebase.cloud.FirestoreClient;
+import com.google.firebase.cloud.StorageClient;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,6 +26,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.LuminanceSource;
@@ -30,13 +36,15 @@ import com.google.zxing.Result;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
 
-
+import com.cloudinary.utils.ObjectUtils;
 @Service
 public class AlunoService {
     private final Firestore db;
+    private final Cloudinary cloudinary;
 
-    public AlunoService(Firestore db) {
+    public AlunoService(Firestore db, Cloudinary cloudinary) {
         this.db = db;
+        this.cloudinary = cloudinary;
     }
 
     public DocumentSnapshot buscar(String uid) throws Exception {
@@ -96,37 +104,51 @@ public class AlunoService {
         }
     }
 
-    public String cadastrarAluno(Aluno aluno) {
+    public String cadastrarAluno(Aluno aluno, MultipartFile foto) {
         try {
+            // 1. Upload da imagem para o Cloudinary
+            // O ObjectUtils.asMap ajuda a definir opções como o nome da pasta (opcional)
+            Map uploadResult = cloudinary.uploader().upload(foto.getBytes(), ObjectUtils.emptyMap());
+
+            // 2. Extrair a URL pública gerada pelo Cloudinary
+            String urlDaFoto = (String) uploadResult.get("url");
+
+            // 3. Preencher os dados do objeto Aluno
+            // Aqui usamos o campo que já existe no teu Firestore
+            aluno.setImagem_url(urlDaFoto);
+
+            // Definir timestamps de criação e atualização
             aluno.setCreatedat(Timestamp.now());
             aluno.setUpdatedat(Timestamp.now());
+
+            // 4. Salvar o objeto completo na coleção "Alunos" do Firestore
             ApiFuture<DocumentReference> docRef = db.collection("Alunos").add(aluno);
+
+            // Retorna o ID do documento criado para confirmação
             return docRef.get().getId();
+
         } catch (Exception e) {
-            throw new RuntimeException("Erro ao salvar aluno", e);
+            // Log do erro para depuração no console do IntelliJ
+            e.printStackTrace();
+            throw new RuntimeException("Erro ao processar cadastro: " + e.getMessage());
         }
     }
 
-    public List<AlunoDto> exibirAlunos() {
+    @Cacheable(value = "listaAlunosCache")
+    public List<Aluno> exibirAlunos() {
         try {
-            ApiFuture<QuerySnapshot> future = db.collection("Alunos").get();
-            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
 
-            return documents.stream().map(doc -> {
-                Aluno aluno = doc.toObject(Aluno.class);
-                return new AlunoDto(
-                        aluno.getNome(),
-                        aluno.getEmail(),
-                        aluno.getRa(),
-                        aluno.getId_curso(),
-                        aluno.getRfid_tag(),
-                        aluno.isStatus_ativo(),
-                        aluno.isEsta_no_campus()
-                );
-            }).toList();
+            QuerySnapshot querySnapshot = db.collection("Alunos").get().get();
 
-        } catch (Exception e) {
-            throw new RuntimeException("Erro ao listar alunos", e);
+            return querySnapshot.getDocuments().stream()
+                    .map(doc -> doc.toObject(Aluno.class))
+                    .toList();
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("A consulta ao Firebase foi interrompida", e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Falha ao recuperar dados do Firebase", e);
         }
     }
 
@@ -139,6 +161,7 @@ public class AlunoService {
                     "ra", aluno.getRa(),
                     "id_curso", aluno.getId_curso(),
                     "rfid_tag", aluno.getRfid_tag(),
+                    "imagemUrl", aluno.getImagem_url(),
                     "status_ativo", aluno.isStatus_ativo(),
                     "esta_no_campus", aluno.isEsta_no_campus(),
                     "updatedat", Timestamp.now()
@@ -149,14 +172,35 @@ public class AlunoService {
     }
 
     public String excluirAluno(String id){
-    try{
-        DocumentReference docRef = db.collection("Alunos").document(id);
-        ApiFuture<WriteResult> resposta = docRef.delete();
-        resposta.get();
-        return "Aluno excluido com sucesso";
-    } catch (Exception e) {
-        throw new RuntimeException(e);
+        try{
+            DocumentReference docRef = db.collection("Alunos").document(id);
+            ApiFuture<WriteResult> resposta = docRef.delete();
+            resposta.get();
+            return "Aluno excluido com sucesso";
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
-}
+
+//    public String verificarAlunoBd(Aluno aluno){
+//        try{
+//
+//        } catch (Exception e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
+
+
+    public Aluno encontrarPorId(String id){
+        try{
+            DocumentSnapshot doc = db.collection("Alunos").document(id).get().get();
+            if (doc.exists()) {
+                return doc.toObject(Aluno.class);
+            }
+            return null;
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao buscar aluno " + id, e);
+        }
+    }
 
 }

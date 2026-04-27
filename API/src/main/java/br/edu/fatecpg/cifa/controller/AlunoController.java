@@ -8,6 +8,7 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.Firestore;
 import com.google.firebase.cloud.FirestoreClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,15 +28,15 @@ public class AlunoController {
         return alunoService.verificarExpiracao(file);
     }
 
-    @PostMapping("/adicionarAluno")
-    public ResponseEntity<String> adicionar(@RequestBody Aluno aluno) {
-        String id = alunoService.cadastrarAluno(aluno);
+    @PostMapping(value = "/adicionarAluno", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> adicionar(@ModelAttribute Aluno aluno, @RequestParam("foto") MultipartFile foto) {
+        String id = alunoService.cadastrarAluno(aluno, foto);
         return ResponseEntity.ok("Aluno criado com ID: " + id);
     }
 
     @GetMapping("/verAlunos")
-    public ResponseEntity<List<AlunoDto>> exibirAlunos() {
-        List<AlunoDto> lista = alunoService.exibirAlunos();
+    public ResponseEntity<List<Aluno>> exibirAlunos() {
+        List<Aluno> lista = alunoService.exibirAlunos();
         return ResponseEntity.ok(lista);
     }
 
@@ -50,4 +51,17 @@ public class AlunoController {
         alunoService.excluirAluno(id);
         return ResponseEntity.ok("Aluno excluido");
     }
+
+    @PostMapping("/verificarAluno/{id}")
+    public ResponseEntity<String> verificarAluno(@RequestBody Aluno aluno){
+        return ResponseEntity.ok("Dado encontrado");
+    }
+
+    @GetMapping("/encontrarPorId/{id}")
+    public ResponseEntity<Aluno> exibirAlunoPorId(@PathVariable String id){
+        Aluno aluno = alunoService.encontrarPorId(id);
+        return ResponseEntity.ok(aluno);
+    }
+
+
 }
