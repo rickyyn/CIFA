@@ -83,27 +83,34 @@ class PerfilActivity : AppCompatActivity() {
                 val ciclo = doc.get("ciclo_atual") ?: "N/A"
                 val imagemUrl = doc.getString("imagem_url")
                 val auth = FirebaseAuth.getInstance()
-                curso = doc.getString("id_curso")?.trim()?.uppercase()
+                val idCurso = doc.getString("id_curso")
 
-                btnHorarios.isEnabled = true
+                if (idCurso != null) {
+                    db.collection("Cursos").document(idCurso).get()
+                        .addOnSuccessListener { docCurso ->
+                            if (docCurso.exists()) {
+                                val nomeCurso = docCurso.getString("nome") ?: idCurso
+                                curso = idCurso
+                                when (idCurso) {
+                                    "DSM" -> tvTurno.text = "Turno: Vespertino"
+                                    "ADS" -> tvTurno.text = "Turno: Noturno"
+                                    "GE" -> tvTurno.text = "Turno: Matutino"
+                                    "COMEX" -> tvTurno.text = "Turno: Noturno"
+                                    "PQ" -> tvTurno.text = "Turno: Matutino"
+                                    else -> tvTurno.text = "Turno: N/A"
+                                }
+                                btnHorarios.isEnabled = true
 
+                                tvNome.text = "$nome"
+                                tvRa.text = "Registo do Aluno: $ra"
+                                tvCiclo.text = "Ciclo: $ciclo"
+                                tvStatus.text =
+                                    if (ativo) "Matricula: Ativa" else "Matricula: Inativa"
+                                tvCurso.text = "$nomeCurso"
 
-
-                tvNome.text = "$nome"
-                tvRa.text = "Registo do Aluno: $ra"
-                tvCiclo.text = "Ciclo: $ciclo"
-                tvStatus.text = if (ativo) "Matricula: Ativa" else "Matricula: Inativa"
-                tvCurso.text = "Curso: $curso"
-
-                when (curso) {
-                    "DSM" -> tvTurno.text = "Turno: Vespertino"
-                    "ADS" -> tvTurno.text ="Turno: Noturno"
-                    "GE" -> tvTurno.text ="Turno: Matutino"
-                    "COMEX" -> tvTurno.text ="Turno: Noturno"
-                    "PQ" -> tvTurno.text = "Turno: Matutino"
+                            }
+                        }
                 }
-
-
                 if (!imagemUrl.isNullOrEmpty()) {
                     Glide.with(this).load(imagemUrl).into(imgPerfil)
                 }
