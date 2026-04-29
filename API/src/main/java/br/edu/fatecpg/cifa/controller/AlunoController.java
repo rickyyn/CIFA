@@ -52,9 +52,16 @@ public class AlunoController {
         return ResponseEntity.ok("Aluno excluido");
     }
 
-    @PostMapping("/verificarAluno/{id}")
-    public ResponseEntity<String> verificarAluno(@RequestBody Aluno aluno){
-        return ResponseEntity.ok("Dado encontrado");
+    @PostMapping("/verificarAluno")
+    public ResponseEntity<String> verificarAluno(@RequestBody Map<String, Object> payload) {
+
+        String nome = (String) payload.get("nome");
+
+        Long ra = ((Number) payload.get("ra")).longValue();
+
+        String dataExpiracao = (String) payload.get("expira_em");
+
+        return ResponseEntity.ok(alunoService.verificarAlunoBd(ra, nome, dataExpiracao));
     }
 
     @GetMapping("/encontrarPorId/{id}")

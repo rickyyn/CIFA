@@ -106,29 +106,18 @@ public class AlunoService {
 
     public String cadastrarAluno(Aluno aluno, MultipartFile foto) {
         try {
-            // 1. Upload da imagem para o Cloudinary
-            // O ObjectUtils.asMap ajuda a definir opções como o nome da pasta (opcional)
             Map uploadResult = cloudinary.uploader().upload(foto.getBytes(), ObjectUtils.emptyMap());
 
-            // 2. Extrair a URL pública gerada pelo Cloudinary
             String urlDaFoto = (String) uploadResult.get("url");
 
-            // 3. Preencher os dados do objeto Aluno
-            // Aqui usamos o campo que já existe no teu Firestore
             aluno.setImagem_url(urlDaFoto);
 
-            // Definir timestamps de criação e atualização
             aluno.setCreatedat(Timestamp.now());
             aluno.setUpdatedat(Timestamp.now());
 
-            // 4. Salvar o objeto completo na coleção "Alunos" do Firestore
             ApiFuture<DocumentReference> docRef = db.collection("Alunos").add(aluno);
-
-            // Retorna o ID do documento criado para confirmação
             return docRef.get().getId();
-
         } catch (Exception e) {
-            // Log do erro para depuração no console do IntelliJ
             e.printStackTrace();
             throw new RuntimeException("Erro ao processar cadastro: " + e.getMessage());
         }
@@ -157,9 +146,10 @@ public class AlunoService {
             DocumentReference docRef = db.collection("Alunos").document(id);
             docRef.update(
                     "nome", aluno.getNome(),
-                    "email", aluno.getEmail(),
+                    "email_institucional", aluno.getEmail_institucional(),
+                    "email_pessoal", aluno.getEmail_pessoal(),
                     "ra", aluno.getRa(),
-                    "id_curso", aluno.getId_curso(),
+                    "id_turma", aluno.getId_turma(),
                     "rfid_tag", aluno.getRfid_tag(),
                     "imagemUrl", aluno.getImagem_url(),
                     "status_ativo", aluno.isStatus_ativo(),
@@ -182,13 +172,27 @@ public class AlunoService {
         }
     }
 
-//    public String verificarAlunoBd(Aluno aluno){
-//        try{
-//
-//        } catch (Exception e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
+    public String verificarAlunoBd(Long ra, String nome, String dataExpiracao) {
+        try {
+            ApiFuture<QuerySnapshot> query = db.collection("Alunos")
+                    .whereEqualTo("ra", ra)
+                    .whereEqualTo("nome", nome)
+                    .get();
+
+            List<QueryDocumentSnapshot> docs = query.get().getDocuments();
+
+            if (docs.isEmpty()) {
+                return "Acesso negado: Dados não conferem.";
+            }
+
+            String idDocumento = docs.get(0).getId();
+
+            return "Aluno: " + nome + " validado com sucesso! Expira em: " + dataExpiracao;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao processar verificação: " + e.getMessage());
+        }
+    }
 
 
     public Aluno encontrarPorId(String id){
