@@ -57,3 +57,6 @@ Simular um sistema real de controle de entrada (como escolas, academias ou empre
 * Integração com ESP32
 * Dashboard web para administração
 * Autenticação de usuários
+
+
+https://www.figma.com/design/rl8BWCTvXmCWOZmfABeATi/Untitled?node-id=0-1&t=HQ2yb7TE64FCy88s-1

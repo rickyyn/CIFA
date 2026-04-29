@@ -7,7 +7,7 @@ import { RouterView } from 'vue-router'
 </template>
 
 <style>
-/* Reset global de scroll e preenchimento */
+
 html, body {
   margin: 0;
   padding: 0;

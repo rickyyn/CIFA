@@ -53,7 +53,7 @@ const router = createRouter({
   ]
 })
 
-// Navigation Guard para Proteção de Rotas
+
 router.beforeEach((to, from, next) => {
   const isAuthenticated = localStorage.getItem('cifa_auth_token') === 'true'
 

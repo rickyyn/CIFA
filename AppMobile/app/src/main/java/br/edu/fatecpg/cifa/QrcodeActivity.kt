@@ -43,11 +43,18 @@ class QrcodeActivity : AppCompatActivity() {
         tvNome.text = "Bem-vindo, $nomeAluno"
         tvNome.setTextColor(getColor(R.color.white))
 
+        val btnVoltar = findViewById<ImageView>(R.id.btnVoltar)
+
+        btnVoltar.setOnClickListener {
+            finish()
+        }
+
 
         val formato = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         formato.timeZone = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
 
         fun gerarQrcode(){
+            ajustarBrilho(1.0f)
             try {
                 val expiraEmMillis = System.currentTimeMillis() + 30000
                 val dataFormatada = formato.format(Date(expiraEmMillis))
@@ -67,6 +74,7 @@ class QrcodeActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+
         }
 
         runnableTempo = object : Runnable {
@@ -111,5 +119,7 @@ class QrcodeActivity : AppCompatActivity() {
         layoutParams.screenBrightness = valor
         window.attributes = layoutParams
     }
+
+
 
 }

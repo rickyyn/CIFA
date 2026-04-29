@@ -12,17 +12,13 @@ const password = ref('')
 const isLoading = ref(false)
 
 const handleLogin = () => {
-  // Impede submissões vazias (simulação básica de validação)
   if (!identifier.value || !password.value) return
 
   isLoading.value = true
 
-  // Simulando uma requisição de API com delay de 1.2 segundos
   setTimeout(() => {
-    // Gravando o token de acesso simulado
     localStorage.setItem('cifa_auth_token', 'true')
     isLoading.value = false
-    // Redirecionando para o painel
     router.push('/admin/dashboard')
   }, 1200)
 }
@@ -121,7 +117,6 @@ const handleLogin = () => {
 </template>
 
 <style scoped>
-/* Tipografia Poppins importada/garantida para a tela de login */
 .font-poppins {
   font-family: 'Poppins', sans-serif;
 }
