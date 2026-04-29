@@ -13,11 +13,8 @@ public class Aluno {
 
     @DocumentId
     private String id;
-
     private String nome;
-    private String email;
     private Long ra;
-    private String id_curso;
     private String rfid_tag;
     private boolean status_ativo;
     private boolean esta_no_campus;
