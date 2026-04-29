@@ -54,7 +54,6 @@ class QrcodeActivity : AppCompatActivity() {
         formato.timeZone = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
 
         fun gerarQrcode(){
-            ajustarBrilho(1.0f)
             try {
                 val expiraEmMillis = System.currentTimeMillis() + 30000
                 val dataFormatada = formato.format(Date(expiraEmMillis))
@@ -74,7 +73,6 @@ class QrcodeActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-
         }
 
         runnableTempo = object : Runnable {
