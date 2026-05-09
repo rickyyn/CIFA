@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "713088214758",
+    "project_id": "rf-id-teste",
+    "storage_bucket": "rf-id-teste.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:713088214758:android:423a53049eadd5f426fd27",
+        "android_client_info": {
+          "package_name": "br.edu.fatecpg.cifa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuPGVXpTatI6vpsavE28sCALuydYyyO7s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

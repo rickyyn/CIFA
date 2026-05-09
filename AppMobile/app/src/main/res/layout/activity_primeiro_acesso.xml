@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#14113B"
+    tools:context=".PrimeiroAcessoActivity">
+
+    <!-- Fundo -->
+    <ImageView
+        android:id="@+id/imgBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/novo_projeto__3_"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+
+    <LinearLayout
+        android:id="@+id/cardContainer"
+        android:layout_width="411dp"
+        android:layout_height="563dp"
+        android:layout_marginHorizontal="12dp"
+        android:background="@drawable/top_square_bottom_round"
+        android:elevation="6dp"
+        android:orientation="vertical"
+        android:padding="24dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/imageView2"
+                android:layout_width="73dp"
+                android:layout_height="71dp"
+                android:src="@drawable/adecfabbd1be3c6427d792a1449e77193093c194" />
+
+            <TextView
+                android:id="@+id/tvDescricaoLogo"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Controle Inteligente\nde Fluxo Acadêmico"
+                android:textColor="#1E1B5E"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:orientation="horizontal">
+
+        </LinearLayout>
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="0dp"
+            android:lineSpacingExtra="-6dp"
+            android:text="Redefina sua\nsenha"
+            android:textColor="#1E1B5E"
+            android:textSize="36sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Defina uma nova senha\npara seu perfil"
+            android:textColor="#555555"
+            android:textSize="16sp" />
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:text="Insira a nova senha:"
+            android:textColor="#1E1B5E"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:endIconMode="password_toggle">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edtNovaSenha"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="@drawable/edittext_rounded"
+                android:hint="Digite sua senha"
+                android:inputType="textPassword"
+                android:paddingHorizontal="16dp"
+                android:textColor="#000000"
+                android:textColorHint="#999999" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Confirme a senha:"
+            android:textColor="#1E1B5E"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:endIconMode="password_toggle">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etConfirmarSenha"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="@drawable/edittext_rounded"
+                android:hint="Confirmar senha"
+                android:inputType="textPassword"
+                android:paddingHorizontal="16dp"
+                android:textColor="#000000"
+                android:textColorHint="#999999" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="24dp" />
+
+    </LinearLayout>
+
+
+    <Button
+        android:id="@+id/btnMudarSenha"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="40dp"
+        android:backgroundTint="#FFFFFF"
+        android:text="Mudar a senha"
+        app:endIconMode="password_toggle"
+        android:textAllCaps="false"
+        android:textColor="#1E1B5E"
+        android:textColorLink="#FCF5FD"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
