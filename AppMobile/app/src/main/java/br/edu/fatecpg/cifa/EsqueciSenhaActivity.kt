@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.addTextChangedListener
 import com.google.firebase.firestore.FirebaseFirestore
 
 class EsqueciSenhaActivity : AppCompatActivity() {
@@ -24,13 +25,28 @@ class EsqueciSenhaActivity : AppCompatActivity() {
         val btnEnviar = findViewById<Button>(R.id.btnEnviarSolicitacao)
         val edtEmail = findViewById<EditText>(R.id.edtEmail)
 
+        btnEnviar.isEnabled = false
+        btnEnviar.alpha = 0.5f
+
+        edtEmail.addTextChangedListener {
+            val preenchido = it.toString().trim().isNotEmpty()
+
+            btnEnviar.isEnabled = preenchido
+            btnEnviar.alpha = if (preenchido) 1f else 0.5f
+        }
 
         btnEnviar.setOnClickListener {
 
-            val email = edtEmail.text.toString()
+            val email = edtEmail.text.toString().trim()
+
+            if (email.isEmpty()) {
+                Toast.makeText(this, "Digite um email válido", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            btnEnviar.isEnabled = false
 
             val dados = hashMapOf(
-
                 "email" to email,
                 "status" to "pendente",
                 "data" to com.google.firebase.Timestamp.now()
@@ -40,15 +56,13 @@ class EsqueciSenhaActivity : AppCompatActivity() {
                 .collection("SolicitacoesSenha")
                 .add(dados)
                 .addOnSuccessListener {
-
-                    Toast.makeText(
-                        this,
-                        "Solicitação enviada!",
-                        Toast.LENGTH_LONG
-                    ).show()
-
+                    Toast.makeText(this, "Solicitação enviada!", Toast.LENGTH_LONG).show()
                     finish()
                 }
+                .addOnFailureListener {
+                    btnEnviar.isEnabled = true
+                    Toast.makeText(this, "Erro ao enviar solicitação", Toast.LENGTH_LONG).show()
+                }
+        }
         }
     }
-}
