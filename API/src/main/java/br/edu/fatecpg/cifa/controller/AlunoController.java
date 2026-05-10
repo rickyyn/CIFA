@@ -41,9 +41,9 @@ public class AlunoController {
         return ResponseEntity.ok(lista);
     }
 
-    @PutMapping("/editarAluno/{id}")
-    public ResponseEntity<String> editar(@PathVariable String id, @RequestBody Aluno aluno){
-        alunoService.editarAluno(id, aluno);
+    @PutMapping(value = "editarAluno/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> editar(@PathVariable String id, @RequestPart("aluno") Aluno aluno, @RequestPart(value = "imagem", required = false) MultipartFile imagem){
+        alunoService.editarAluno(id, aluno, imagem);
         return ResponseEntity.ok("Aluno atualizado");
     }
 

@@ -142,9 +142,16 @@ public class AlunoService {
         }
     }
 
-    public void editarAluno(String id, Aluno aluno){
+    public void editarAluno(String id, Aluno aluno, MultipartFile imagem){
         try{
             DocumentReference docRef = db.collection("Alunos").document(id);
+
+            if (imagem != null && !imagem.isEmpty()) {
+                Map uploadResult = cloudinary.uploader().upload(imagem.getBytes(), ObjectUtils.emptyMap());
+                String urlDaFoto = (String) uploadResult.get("url");
+                aluno.setImagem_url(urlDaFoto);
+            }
+
             docRef.update(
                     "nome", aluno.getNome(),
                     "email_institucional", aluno.getEmail_institucional(),
@@ -152,7 +159,7 @@ public class AlunoService {
                     "ra", aluno.getRa(),
                     "id_turma", aluno.getId_turma(),
                     "rfid_tag", aluno.getRfid_tag(),
-                    "imagemUrl", aluno.getImagem_url(),
+                    "imagem_url", aluno.getImagem_url(),
                     "status_ativo", aluno.isStatus_ativo(),
                     "esta_no_campus", aluno.isEsta_no_campus(),
                     "updatedat", Timestamp.now()
