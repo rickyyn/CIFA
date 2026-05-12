@@ -3,6 +3,7 @@ package br.edu.fatecpg.cifa.service;
 import br.edu.fatecpg.cifa.model.Curso;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
 import org.springframework.stereotype.Service;
@@ -54,4 +55,18 @@ public class CursoService {
             throw new RuntimeException(e);
         }
     }
+
+    public Curso cursoPeloId(String id){
+        try{
+            DocumentSnapshot doc = db.collection("Cursos").document(id).get().get();
+            if(doc.exists()){
+                return doc.toObject(Curso.class);
+            }
+            return null;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
 }

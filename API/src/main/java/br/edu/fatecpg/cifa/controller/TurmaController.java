@@ -30,4 +30,11 @@ public class TurmaController {
         String resposta = turmaService.excluir(id);
         return ResponseEntity.ok(resposta);
     }
+
+
+    @GetMapping("/buscarPeloId/{id}")
+    public ResponseEntity<Turma> buscarId(@PathVariable String id){
+        Turma turma = turmaService.turmaPeloId(id);
+        return ResponseEntity.ok(turma);
+    }
 }

@@ -8,6 +8,7 @@ import com.google.cloud.firestore.*;
 import com.google.cloud.storage.Bucket;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.firebase.cloud.StorageClient;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -107,6 +108,7 @@ public class AlunoService {
         }
     }
 
+    @CacheEvict(value = "alunos", allEntries = true)
     public String cadastrarAluno(Aluno aluno, MultipartFile foto) {
         try {
             Map uploadResult = cloudinary.uploader().upload(foto.getBytes(), ObjectUtils.emptyMap());
@@ -124,16 +126,14 @@ public class AlunoService {
         }
     }
 
-    @Cacheable(value = "listaAlunosCache")
+    @Cacheable(value = "alunos", key = "'all'")
     public List<Aluno> exibirAlunos() {
         try {
-
             QuerySnapshot querySnapshot = db.collection("Alunos").get().get();
 
             return querySnapshot.getDocuments().stream()
                     .map(doc -> doc.toObject(Aluno.class))
                     .toList();
-
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("A consulta ao Firebase foi interrompida", e);
@@ -144,6 +144,7 @@ public class AlunoService {
 
     public void editarAluno(String id, Aluno aluno, MultipartFile imagem){
         try{
+
             DocumentReference docRef = db.collection("Alunos").document(id);
 
             if (imagem != null && !imagem.isEmpty()) {
@@ -180,6 +181,7 @@ public class AlunoService {
         }
     }
 
+    @Cacheable(value = "validacao_aluno", key = "#ra")
     public String verificarAlunoBd(Long ra, String nome, String dataExpiracao) {
         try {
             ApiFuture<QuerySnapshot> query = db.collection("Alunos")

@@ -29,4 +29,10 @@ public class CursoController {
         String resposta = cursoService.excluirCurso(id);
         return ResponseEntity.ok(resposta);
     }
+
+    @GetMapping("/buscarPeloId/{id}")
+    public ResponseEntity<Curso> buscarId(@PathVariable String id){
+        Curso curso = cursoService.cursoPeloId(id);
+        return ResponseEntity.ok(curso);
+    }
 }

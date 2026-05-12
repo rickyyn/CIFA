@@ -1,8 +1,10 @@
 package br.edu.fatecpg.cifa.service;
 
+import br.edu.fatecpg.cifa.model.Aluno;
 import br.edu.fatecpg.cifa.model.Turma;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
 import org.springframework.stereotype.Service;
@@ -57,4 +59,15 @@ public class TurmaService {
         }
     }
 
+    public Turma turmaPeloId(String id) {
+        try {
+            DocumentSnapshot doc = db.collection("Turmas").document(id).get().get();
+            if (doc.exists()) {
+                return doc.toObject(Turma.class);
+            }
+            return null;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
