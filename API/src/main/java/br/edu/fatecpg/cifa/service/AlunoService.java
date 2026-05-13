@@ -29,10 +29,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 import com.google.zxing.BinaryBitmap;
@@ -215,6 +212,7 @@ public class AlunoService {
             throw new RuntimeException("Erro ao buscar aluno " + id, e);
         }
     }
+    @Cacheable(value = "alunos", key = "#ra")
     private Aluno buscarNoFirestore(Long ra) {
         try {
             ApiFuture<QuerySnapshot> query = db.collection("Alunos")
@@ -233,10 +231,62 @@ public class AlunoService {
         }
         return null;
     }
+
+    private String extrairCurso(String turma) {
+        if (turma == null || turma.isEmpty()) {
+            return "N/A";
+        }
+        int underlinePos = turma.indexOf('_');
+        if (underlinePos != -1) {
+            return turma.substring(0, underlinePos);
+        }
+        return turma;
+    }
+    private void salvarLogAcessoQrCode(Aluno aluno) {
+        try {
+            Map<String, Object> fields = new HashMap<>();
+            String alunoPath = "Alunos/" + aluno.getId();
+            String isoTimestamp = java.time.ZonedDateTime.now(java.time.ZoneId.of("UTC-3"))
+                    .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+            if(aluno.isStatus_ativo()){
+            String tipoLog = aluno.isEsta_no_campus() ? "saida" : "entrada";
+            fields.put("nome", Map.of("stringValue", aluno.getNome()));
+            fields.put("ra", Map.of("integerValue", aluno.getRa()));
+            fields.put("turma", Map.of("stringValue", aluno.getId_turma()));
+            fields.put("curso", Map.of("stringValue", extrairCurso(aluno.getId_turma())));
+            fields.put("metodo", Map.of("stringValue", "QRCode"));
+            fields.put("tipo", Map.of("stringValue", tipoLog));
+            fields.put("status_acesso", Map.of("booleanValue", true));
+            fields.put("timestamp", Map.of("timestampValue", isoTimestamp));
+            db.collection("Alunos").document(aluno.getId())
+                    .collection("Logs").add(fields);
+            db.collection("Alunos").document(aluno.getId())
+                    .update("esta_no_campus", !aluno.isEsta_no_campus());
+            System.out.println("Log gravado");
+            }else{
+                fields.put("nome", Map.of("stringValue", aluno.getNome()));
+                fields.put("ra", Map.of("integerValue", aluno.getRa()));
+                fields.put("turma", Map.of("stringValue", aluno.getId_turma()));
+                fields.put("curso", Map.of("stringValue", extrairCurso(aluno.getId_turma())));
+                fields.put("metodo", Map.of("stringValue", "QRCode"));
+                fields.put("status_acesso", Map.of("booleanValue", false));
+                fields.put("timestamp", Map.of("timestampValue", isoTimestamp));
+                fields.put("tipo", Map.of("stringValue", "Aluno inativo"));
+                db.collection("Alunos").document(aluno.getId())
+                        .collection("Logs").add(fields);
+                System.out.println("Log gravado");
+            }
+        } catch (Exception e) {
+            System.err.println("Erro do log " + e.getMessage());
+        }
+    }
     public boolean validarAcesso(Long ra) {
         Aluno aluno = buscarNoFirestore(ra);
+        salvarLogAcessoQrCode(aluno);
         if (aluno != null && aluno.isStatus_ativo()) {
             enviarSinalAbrirCatraca();
+
+
             return true;
         }
         return false;
@@ -260,7 +310,7 @@ public class AlunoService {
             System.out.println(response.body());
 
         } catch (Exception e) {
-            System.err.println("ERRO DE REDE: O Java nao alcanca o ESP32. Detalhes: " + e.getMessage());
+            System.err.println("erro: Java nao acha o ESP32. " + e.getMessage());
         }
     }
 
