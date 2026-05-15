@@ -1,9 +1,5 @@
 <script setup lang="ts">
-<<<<<<< HEAD
 import { ref, onMounted } from 'vue'
-=======
-import { ref } from 'vue'
->>>>>>> e6819bfbf6a12330714de153f143f8b90643f011
 import { useRouter, useRoute, RouterView } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import Toaster from '@/components/ui/toast/Toaster.vue'
@@ -16,7 +12,6 @@ const route = useRoute()
 // Controlo do menu mobile (abrir/fechar)
 const isMobileMenuOpen = ref(false)
 
-<<<<<<< HEAD
 // Controlo da Sidebar minimizada (Desktop)
 const isSidebarCollapsed = ref(false)
 
@@ -30,11 +25,6 @@ onMounted(() => {
   }
 })
 
-=======
-// NOVO: Controlo da Sidebar minimizada (Desktop)
-const isSidebarCollapsed = ref(false)
-
->>>>>>> e6819bfbf6a12330714de153f143f8b90643f011
 const handleLogout = () => {
   localStorage.removeItem('cifa_auth_token')
   router.push('/login')
@@ -93,13 +83,9 @@ const toggleSidebar = () => {
           class="flex justify-between items-start mb-4 shrink-0"
         >
           <div v-auto-animate>
-<<<<<<< HEAD
             <h2 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight leading-none mb-1.5">
               Olá, {{ adminName }}!
             </h2>
-=======
-            <h2 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight leading-none mb-1.5">Olá, Vinícius!</h2>
->>>>>>> e6819bfbf6a12330714de153f143f8b90643f011
             <p class="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]">Visão Geral Diária</p>
           </div>
         </header>
