@@ -72,4 +72,17 @@ public class AlunoController {
         return ResponseEntity.ok(aluno);
     }
 
+    @PostMapping("/importar")
+    public ResponseEntity<String> importarCsv(@RequestParam("arquivo") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("Arquivo vazio!");
+        }
+        try {
+            alunoService.importarAlunos(file);
+            return ResponseEntity.ok("Alunos importados com sucesso!");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Erro ao processar CSV: " + e.getMessage());
+        }
+    }
+
 }
