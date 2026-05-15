@@ -4,6 +4,24 @@ import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+<<<<<<< HEAD
+import { Loader2, ArrowRight, UserCircle } from 'lucide-vue-next'
+
+const router = useRouter()
+
+// Estados do Fluxo
+const step = ref<'login' | 'name'>('login')
+const isLoading = ref(false)
+const errorMessage = ref('')
+
+// Dados do Formulário
+const identifier = ref('')
+const password = ref('')
+const adminName = ref('')
+
+const handleLogin = () => {
+  errorMessage.value = ''
+=======
 import { Loader2 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -12,15 +30,50 @@ const password = ref('')
 const isLoading = ref(false)
 
 const handleLogin = () => {
+>>>>>>> e6819bfbf6a12330714de153f143f8b90643f011
   if (!identifier.value || !password.value) return
 
   isLoading.value = true
 
   setTimeout(() => {
+<<<<<<< HEAD
+    isLoading.value = false
+    
+    // Validação Real (Mock)
+    if (identifier.value === 'admin' && password.value === '1234') {
+      const storedName = localStorage.getItem('cifa_admin_name')
+      
+      if (storedName) {
+        // Se já tem nome, vai direto para o sistema
+        localStorage.setItem('cifa_auth_token', 'true')
+        router.push('/admin/dashboard')
+      } else {
+        // Primeiro acesso: pede o nome
+        step.value = 'name'
+      }
+    } else {
+      errorMessage.value = 'Acesso negado. Credenciais inválidas.'
+    }
+  }, 1000)
+}
+
+const handleSaveName = () => {
+  if (!adminName.value.trim()) return
+
+  isLoading.value = true
+
+  setTimeout(() => {
+    localStorage.setItem('cifa_admin_name', adminName.value.trim())
+    localStorage.setItem('cifa_auth_token', 'true')
+    isLoading.value = false
+    router.push('/admin/dashboard')
+  }, 800)
+=======
     localStorage.setItem('cifa_auth_token', 'true')
     isLoading.value = false
     router.push('/admin/dashboard')
   }, 1200)
+>>>>>>> e6819bfbf6a12330714de153f143f8b90643f011
 }
 </script>
 
@@ -44,10 +97,17 @@ const handleLogin = () => {
 
       <div class="relative z-10 max-w-lg mt-12">
         <h2 class="text-6xl font-bold leading-tight mb-6 tracking-tight">
+<<<<<<< HEAD
+          Bem-vindo <br /> de volta! <span class="inline-block origin-bottom-right hover:animate-wave cursor-default">👋</span>
+        </h2>
+        <p class="text-xl text-slate-300 leading-relaxed font-light">
+          Simplifique processos, organize acessos e mantenha a gestão académica da instituição de forma centralizada.
+=======
           Bem vindo <br /> de volta! <span class="inline-block origin-bottom-right hover:animate-wave cursor-default">👋</span>
         </h2>
         <p class="text-xl text-slate-300 leading-relaxed font-light">
           Simplifique processos, organize entradas e saídas e tenha o controle da Fatec na palma da mão.
+>>>>>>> e6819bfbf6a12330714de153f143f8b90643f011
         </p>
       </div>
 
@@ -57,6 +117,94 @@ const handleLogin = () => {
     </aside>
 
     <section class="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12">
+<<<<<<< HEAD
+      <div class="w-full max-w-md flex flex-col space-y-8" v-auto-animate>
+        
+        <div v-if="step === 'login'" key="login-step" class="w-full">
+          <div class="mb-8">
+            <h3 class="text-2xl font-bold text-slate-900 tracking-tight">Entrar no CIFA</h3>
+            <p class="text-sm text-slate-500 mt-2 font-medium">Insira as suas credenciais de administrador.</p>
+          </div>
+
+          <form @submit.prevent="handleLogin" class="space-y-5">
+            <div class="space-y-1.5">
+              <Label for="identifier" class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Utilizador</Label>
+              <Input 
+                id="identifier" 
+                type="text" 
+                v-model="identifier"
+                :disabled="isLoading"
+                placeholder="Ex: admin"
+                class="h-12 px-4 text-base bg-slate-50 border-slate-200 focus-visible:ring-indigo-600 rounded-xl transition-all"
+                :class="{'border-red-300 bg-red-50': errorMessage}"
+              />
+            </div>
+
+            <div class="space-y-1.5">
+              <Label for="password" class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Palavra-passe</Label>
+              <Input 
+                id="password" 
+                type="password" 
+                v-model="password"
+                :disabled="isLoading"
+                placeholder="••••••••"
+                class="h-12 px-4 text-base bg-slate-50 border-slate-200 focus-visible:ring-indigo-600 rounded-xl transition-all"
+                :class="{'border-red-300 bg-red-50': errorMessage}"
+              />
+            </div>
+
+            <p v-if="errorMessage" class="text-xs font-bold text-red-500 text-center animate-in fade-in slide-in-from-top-2">
+              {{ errorMessage }}
+            </p>
+
+            <Button 
+              type="submit" 
+              :disabled="isLoading"
+              class="w-full h-14 mt-4 bg-[#1A1A3A] hover:bg-[#0A102E] text-white font-bold text-base rounded-2xl transition-all shadow-xl shadow-[#1A1A3A]/20 active:scale-[0.98]"
+            >
+              <Loader2 v-if="isLoading" class="w-5 h-5 animate-spin" />
+              <span v-else>Autenticar Acesso</span>
+            </Button>
+          </form>
+        </div>
+
+        <div v-else-if="step === 'name'" key="name-step" class="w-full">
+          <div class="mb-8 flex flex-col items-center text-center">
+            <div class="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-6 border border-indigo-100 shadow-inner">
+              <UserCircle class="w-8 h-8 text-indigo-600" />
+            </div>
+            <h3 class="text-2xl font-bold text-slate-900 tracking-tight">Primeiro Acesso</h3>
+            <p class="text-sm text-slate-500 mt-2 font-medium max-w-xs leading-relaxed">
+              Para personalizarmos a sua experiência no painel, como gostaria de ser chamado?
+            </p>
+          </div>
+
+          <form @submit.prevent="handleSaveName" class="space-y-6">
+            <div class="space-y-1.5">
+              <Input 
+                id="adminName" 
+                type="text" 
+                v-model="adminName"
+                :disabled="isLoading"
+                placeholder="O seu primeiro nome ou apelido"
+                class="h-14 px-4 text-center text-lg font-bold text-slate-800 bg-slate-50 border-slate-200 focus-visible:ring-indigo-600 rounded-2xl shadow-inner placeholder:font-medium placeholder:text-sm"
+              />
+            </div>
+
+            <Button 
+              type="submit" 
+              :disabled="isLoading || !adminName.trim()"
+              class="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base rounded-2xl transition-all shadow-xl shadow-indigo-600/20 active:scale-[0.98] gap-2"
+            >
+              <Loader2 v-if="isLoading" class="w-5 h-5 animate-spin" />
+              <template v-else>
+                <span>Entrar no Dashboard</span>
+                <ArrowRight class="w-5 h-5" />
+              </template>
+            </Button>
+          </form>
+        </div>
+=======
       <div class="w-full max-w-md flex flex-col space-y-8">
         
         <div>
@@ -109,6 +257,7 @@ const handleLogin = () => {
           </Button>
 
         </form>
+>>>>>>> e6819bfbf6a12330714de153f143f8b90643f011
 
       </div>
     </section>
