@@ -24,6 +24,7 @@ class MainActivity : AppCompatActivity() {
         val edtEmail = findViewById<EditText>(R.id.edt_email)
         val edtSenha = findViewById<EditText>(R.id.edt_senha)
         val tvEsqueceuSenha = findViewById<TextView>(R.id.tvEsqueceuSenha)
+        val tvContato = findViewById<TextView>(R.id.tvContato)
 
 
         btnLogin.setOnClickListener {
@@ -82,10 +83,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         tvEsqueceuSenha.setOnClickListener {
-
             startActivity(
                 Intent(this, EsqueciSenhaActivity::class.java)
             )
+        }
+
+        tvContato.setOnClickListener{
+            startActivity(
+                Intent(this, ContatoActivity::class.java)
+            )
+
         }
 
     }
