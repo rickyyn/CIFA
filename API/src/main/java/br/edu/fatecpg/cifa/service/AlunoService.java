@@ -6,8 +6,14 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.*;
 import com.google.cloud.storage.Bucket;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserRecord;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.firebase.cloud.StorageClient;
+import com.opencsv.bean.CsvToBean;
+import com.opencsv.bean.CsvToBeanBuilder;
+import com.opencsv.bean.HeaderColumnNameMappingStrategy;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -21,11 +27,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -108,15 +115,21 @@ public class AlunoService {
     @CacheEvict(value = "alunos", allEntries = true)
     public String cadastrarAluno(Aluno aluno, MultipartFile foto) {
         try {
+            UserRecord.CreateRequest request = new UserRecord.CreateRequest()
+                    .setEmail(aluno.getEmail_institucional())
+                    .setPassword("123456")
+                    .setDisplayName(aluno.getNome());
+            UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
+            String uid = userRecord.getUid();
             Map uploadResult = cloudinary.uploader().upload(foto.getBytes(), ObjectUtils.emptyMap());
             String urlDaFoto = (String) uploadResult.get("url");
             aluno.setImagem_url(urlDaFoto);
-
             aluno.setCreatedat(Timestamp.now());
             aluno.setUpdatedat(Timestamp.now());
+            aluno.setStatus_ativo(true);
 
-            ApiFuture<DocumentReference> docRef = db.collection("Alunos").add(aluno);
-            return docRef.get().getId();
+            db.collection("Alunos").document(uid).set(aluno).get();
+            return uid;
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Erro ao processar cadastro: " + e.getMessage());
@@ -313,5 +326,40 @@ public class AlunoService {
             System.err.println("erro: Java nao acha o ESP32. " + e.getMessage());
         }
     }
+
+    public void importarAlunos(MultipartFile file) throws Exception {
+        String content = new String(file.getBytes(), StandardCharsets.UTF_8);
+        content = content.replace("\uFEFF", "").trim();
+        try (Reader reader = new StringReader(content)) {
+            CsvToBean<Aluno> csvToBean = new CsvToBeanBuilder<Aluno>(reader)
+                    .withType(Aluno.class)
+                    .withIgnoreLeadingWhiteSpace(true)
+                    .withSeparator(',')
+                    .build();
+            List<Aluno> alunos = csvToBean.parse();
+            for (Aluno aluno : alunos) {
+                if (aluno.getRa() != null) {
+                    UserRecord.CreateRequest request = new UserRecord.CreateRequest()
+                    .setEmail(aluno.getEmail_institucional())
+                            .setPassword("123456")
+                                    .setDisplayName(aluno.getNome())
+                                            .setDisabled(false);
+                    try {
+                        UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
+                        aluno.setCreatedat(Timestamp.now());
+                        aluno.setUpdatedat(Timestamp.now());
+                        aluno.setStatus_ativo(true);
+                        aluno.setEsta_no_campus(false);
+                        aluno.setCiclo_atual(1);
+                        db.collection("Alunos").document(userRecord.getUid()).set(aluno).get();
+                        System.out.println("Usuário e Documento criados para: " + aluno.getNome());
+                    } catch (FirebaseAuthException e) {
+                        System.err.println("Erro ao criar usuário no Auth: " + e.getMessage());
+                    }
+                }
+            }
+        }
+    }
+
 
 }

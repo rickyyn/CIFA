@@ -1,6 +1,7 @@
 package br.edu.fatecpg.cifa.controller;
 
 import br.edu.fatecpg.cifa.dto.LogDto;
+import br.edu.fatecpg.cifa.model.Log;
 import br.edu.fatecpg.cifa.service.LogService;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
@@ -30,7 +31,13 @@ public class LogController {
     }
 
     @GetMapping("/exibirTodos")
-    public ResponseEntity<List<LogDto>> getTodosOsLogs() {
-        return ResponseEntity.ok(logService.exibirRelatorio());
+    public ResponseEntity<List<Log>> getTodosOsLogs() {
+        List<Log> logs = logService.exibirRelatorioGeral();
+
+        if (logs.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(logs);
     }
 }
