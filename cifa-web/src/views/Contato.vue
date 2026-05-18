@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator'
 const router = useRouter()
 const { toast } = useToast()
 
-const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
+const API_BASE = 'http://localhost:8080'
 const headers = { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' }
 
 // ==========================================

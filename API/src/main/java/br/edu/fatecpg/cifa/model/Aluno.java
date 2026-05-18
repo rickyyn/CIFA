@@ -43,4 +43,17 @@ public class Aluno {
     private Timestamp createdat;
     @JsonIgnore
     private Timestamp updatedat;
+
+    @com.google.cloud.firestore.annotation.Exclude
+    private String novaSenha;
+
+    public String getNovaSenha(){
+        return novaSenha;
+    }
+
+    public void setNovaSenha(String senha) {
+        this.novaSenha = senha;
+    }
+
+
 }

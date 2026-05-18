@@ -87,7 +87,7 @@ const filters = ref({
 // ==========================================
 const fetchAPIStudents = async (): Promise<Student[]> => {
   try {
-    const response = await fetch('https://reply-imprint-skier.ngrok-free.dev/alunos/verAlunos', {
+    const response = await fetch('http://localhost:8080/alunos/verAlunos', {
       headers: { 'ngrok-skip-browser-warning': 'true' }
     })
     if (!response.ok) throw new Error('Falha na comunicação com a API')

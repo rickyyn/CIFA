@@ -362,4 +362,19 @@ public class AlunoService {
     }
 
 
+    public String redefinirSenha(String id, String novasenha) throws Exception {
+
+        if(novasenha.length() < 6){
+            throw new IllegalAccessException("A senha deve ter no minimo 6 caracteres");
+        }
+        UserRecord.UpdateRequest authRequest = new UserRecord.UpdateRequest(id)
+                .setPassword(novasenha);
+        FirebaseAuth.getInstance().updateUser(authRequest);
+        return "Senha atualizada com successo";
+    }
+
+
+
+
+
 }

@@ -4,6 +4,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import Cadastro from '@/views/Cadastro.vue'
 import Administracao from '@/views/Administracao.vue'
+import Estudantes from '@/views/Estudantes.vue'
 import Relatorios from '@/views/Relatorios.vue'
 import Contato from '@/views/Contato.vue'
 
@@ -36,6 +37,11 @@ const routes = [
         path: 'administracao',
         name: 'Administracao',
         component: Administracao
+      },
+      {
+        path: 'estudantes',
+        name: 'Estudantes',
+        component: Estudantes
       },
       {
         path: 'relatorios',
