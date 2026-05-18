@@ -50,6 +50,8 @@ import { useToast } from '@/components/ui/toast/use-toast'
 const router = useRouter()
 const { toast } = useToast()
 
+const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
+
 interface Student {
   id: string | number
   name: string
@@ -74,6 +76,11 @@ const studentToEdit = ref<Student | null>(null)
 const studentToDelete = ref<Student | null>(null)
 const isSavingEdit = ref(false)
 
+// Estados de Imagem para Edição
+const editFileInputRef = ref<HTMLInputElement | null>(null)
+const editImagePreview = ref<string | null>(null)
+const editSelectedFile = ref<File | null>(null)
+
 // Configuração de Abas Formais
 type TabType = 'todos' | 1 | 2 | 3 | 4 | 5 | 6 | 'inativos'
 const activeTab = ref<TabType>('todos')
@@ -91,7 +98,7 @@ const tabs: { id: TabType, label: string }[] = [
 
 const fetchAPIStudents = async (): Promise<Student[]> => {
   try {
-    const response = await fetch('https://reply-imprint-skier.ngrok-free.dev/alunos/verAlunos', {
+    const response = await fetch(`${API_BASE}/alunos/verAlunos`, {
       headers: {
         'ngrok-skip-browser-warning': 'true'
       }
@@ -186,13 +193,28 @@ const getCount = (tabId: TabType) => {
   return allStudents.value.filter(s => s.semester === tabId).length
 }
 
+// Abrir Edição
 const openEdit = (student: Student) => {
   studentToEdit.value = JSON.parse(JSON.stringify(student))
+  editImagePreview.value = student.avatar
+  editSelectedFile.value = null
   isEditModalOpen.value = true
 }
 
+// Manipular Foto
+const handleEditImageChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files[0]) {
+    const file = target.files[0]
+    editSelectedFile.value = file
+    const reader = new FileReader()
+    reader.onload = (e) => { editImagePreview.value = e.target?.result as string }
+    reader.readAsDataURL(file)
+  }
+}
+
 // ==========================================
-// MUDANÇA CRUCIAL: EDIÇÃO VIA JSON (O BACKEND EXIGE JSON AQUI)
+// SALVAR EDIÇÃO COM FORMDATA (MUDANÇA DE 'foto' PARA 'imagem')
 // ==========================================
 const saveEdit = async () => {
   if (!studentToEdit.value) return
@@ -205,32 +227,35 @@ const saveEdit = async () => {
     else if (s.period === 'Matutino') pStr = 'MAT'
     const idTurma = `${s.course}_${new Date().getFullYear()}_1_${pStr}`
 
-    // Como o backend utiliza @RequestBody, precisamos enviar JSON puro
-    const payload = {
-      nome: s.name,
-      ra: Number(s.registration),
-      id_turma: idTurma,
-      email_institucional: s.contact,
-      email_pessoal: s.contact,
-      status_ativo: s.status === 'Ativo',
-      ciclo_atual: Number(s.semester),
-      imagem_url: s.avatar, // Mantém a foto que já existe
-      rfid_tag: "",
-      esta_no_campus: false
+    // Usar FormData para que o Spring Boot (MultipartFile) consiga ler
+    const formData = new FormData()
+    formData.append('nome', s.name)
+    formData.append('ra', String(s.registration))
+    formData.append('id_turma', idTurma)
+    formData.append('email_institucional', s.contact)
+    formData.append('email_pessoal', s.contact)
+    formData.append('status_ativo', String(s.status === 'Ativo'))
+    formData.append('ciclo_atual', String(s.semester))
+    formData.append('rfid_tag', "")
+    formData.append('esta_no_campus', "false")
+
+    // A MÁGICA: O backend Java usa "MultipartFile imagem", então temos que mandar como 'imagem'
+    if (editSelectedFile.value) {
+      formData.append('imagem', editSelectedFile.value)
     }
 
-    const response = await fetch(`https://reply-imprint-skier.ngrok-free.dev/alunos/editarAluno/${s.id}`, {
+    const response = await fetch(`${API_BASE}/alunos/editarAluno/${s.id}`, {
       method: 'PUT',
       headers: { 
-        'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true' 
+        // Nunca colocar Content-Type: application/json quando se usa FormData
       },
-      body: JSON.stringify(payload)
+      body: formData
     })
 
-    if (!response.ok) throw new Error('Erro ao atualizar')
+    if (!response.ok) throw new Error('Erro ao atualizar na API')
 
-    toast({ title: "Perfil Atualizado", description: `Os dados de ${s.name} foram salvos com sucesso no backend.` })
+    toast({ title: "Perfil Atualizado", description: `Os dados de ${s.name} foram salvos com sucesso.` })
     isEditModalOpen.value = false
     loadStudents()
   } catch (error) {
@@ -250,7 +275,7 @@ const confirmDelete = async () => {
   const id = String(studentToDelete.value.id)
   
   try {
-    const response = await fetch(`https://reply-imprint-skier.ngrok-free.dev/alunos/excluirAluno/${id}`, {
+    const response = await fetch(`${API_BASE}/alunos/excluirAluno/${id}`, {
       method: 'DELETE',
       headers: { 'ngrok-skip-browser-warning': 'true' }
     })
@@ -397,22 +422,29 @@ const getStatusStyle = (status: string) => {
 
     <Dialog v-model:open="isEditModalOpen">
       <DialogContent class="rounded-[2.5rem] w-[95vw] sm:max-w-[650px] border-none shadow-2xl p-0 overflow-hidden font-poppins">
-        <div class="bg-slate-50 p-6 flex items-center justify-between border-b border-slate-100">
-          <div>
+        
+        <div class="bg-slate-50 p-6 border-b border-slate-100">
+          <DialogHeader>
             <DialogTitle class="text-xl font-bold text-slate-900">Atualizar Cadastro</DialogTitle>
-            <DialogDescription class="text-xs">Modifique os dados acadêmicos do aluno.</DialogDescription>
-          </div>
-          <Button variant="ghost" size="icon" @click="isEditModalOpen = false" class="rounded-full"><X class="w-4 h-4" /></Button>
+            <DialogDescription class="text-xs">Modifique os dados acadêmicos e a foto do aluno.</DialogDescription>
+          </DialogHeader>
         </div>
 
         <div v-if="studentToEdit" class="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
           <div class="flex flex-col md:flex-row gap-8">
             
             <div class="flex flex-col items-center gap-4">
-              <div class="relative">
+              <div @click="editFileInputRef?.click()" class="relative group cursor-pointer">
                 <div class="w-32 h-32 rounded-full bg-white border-4 border-white shadow-lg overflow-hidden relative">
-                  <img :src="studentToEdit.avatar" class="w-full h-full object-cover" />
+                  <img :src="editImagePreview || studentToEdit.avatar" class="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                  <div class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera class="w-6 h-6 text-white" />
+                  </div>
                 </div>
+                <div class="absolute -bottom-1 -right-1 bg-indigo-600 text-white p-2 rounded-full border-2 border-white shadow-md">
+                  <ImagePlus class="w-3 h-3" />
+                </div>
+                <input type="file" ref="editFileInputRef" @change="handleEditImageChange" accept="image/*" class="hidden" />
               </div>
               <Badge :class="getStatusStyle(studentToEdit.status)" class="uppercase text-[9px] font-black px-4">{{ studentToEdit.status }}</Badge>
             </div>

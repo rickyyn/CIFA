@@ -9,9 +9,13 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast/use-toast'
 
 const router = useRouter()
+const { toast } = useToast()
+
+const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
 
 interface AccessLog {
   id: string | number
@@ -25,61 +29,109 @@ interface AccessLog {
   type: 'Entrada' | 'Saída'
 }
 
-const searchQuery = ref(''); const isFilterDialogOpen = ref(false); const isDetailModalOpen = ref(false); const selectedLog = ref<AccessLog | null>(null); const currentPage = ref(1); const itemsPerPage = 8; const isLoadingData = ref(true)
+const searchQuery = ref('')
+const isFilterDialogOpen = ref(false)
+const isDetailModalOpen = ref(false)
+const selectedLog = ref<AccessLog | null>(null)
+const currentPage = ref(1)
+const itemsPerPage = 8
+const isLoadingData = ref(true)
 
 type TabType = 'todos' | 'hoje' | 'semana' | 'entradas' | 'saidas' | 'negados'
 const activeTab = ref<TabType>('todos')
-const tabs: { id: TabType, label: string }[] = [{ id: 'todos', label: 'Histórico Geral' }, { id: 'hoje', label: 'Hoje' }, { id: 'semana', label: 'Últimos 7 Dias' }, { id: 'entradas', label: 'Apenas Entradas' }, { id: 'saidas', label: 'Apenas Saídas' }, { id: 'negados', label: 'Acessos Negados' }]
-const filters = ref({ period: 'todos', course: 'todos' }); const allLogs = ref<AccessLog[]>([])
+const tabs: { id: TabType, label: string }[] = [
+  { id: 'todos', label: 'Histórico Geral' }, 
+  { id: 'hoje', label: 'Hoje' }, 
+  { id: 'semana', label: 'Últimos 7 Dias' }, 
+  { id: 'entradas', label: 'Apenas Entradas' }, 
+  { id: 'saidas', label: 'Apenas Saídas' }, 
+  { id: 'negados', label: 'Acessos Negados' }
+]
+
+const filters = ref({ period: 'todos', course: 'todos' })
+const allLogs = ref<AccessLog[]>([])
 
 // ============================================================
-// LÊ RELATÓRIOS VERDADEIROS DA API (FIM DOS DADOS FALSOS)
+// CONEXÃO INTELIGENTE COM A API (CRUZAMENTO DE DADOS)
 // ============================================================
 const fetchAPIReports = async () => {
   isLoadingData.value = true
   try {
-    const response = await fetch('https://reply-imprint-skier.ngrok-free.dev/relatorios/exibirTodos', { 
-      headers: { 'ngrok-skip-browser-warning': 'true' } 
-    })
+    const headers = { 'ngrok-skip-browser-warning': 'true' }
     
-    if (!response.ok) throw new Error('Falha na comunicação com a API de Relatórios')
+    // Requisições paralelas para ganhar performance
+    const [reportsRes, studentsRes] = await Promise.all([
+      fetch(`${API_BASE}/relatorio/exibirTodos`, { headers }),
+      // O catch previne que a falha nos alunos quebre os relatórios
+      fetch(`${API_BASE}/alunos/verAlunos`, { headers }).catch(() => null) 
+    ])
+    
+    if (!reportsRes.ok) {
+      throw new Error(`Erro ${reportsRes.status}: Rota de relatórios não encontrada ou falha no backend.`)
+    }
 
-    const responseData = await response.json()
-    const dataArray = Array.isArray(responseData) ? responseData : (responseData.relatorios || responseData.data || [])
+    // Criando um Dicionário de Fotos (RA -> URL da Foto)
+    const photoDictionary = new Map<string, string>()
     
-    // Adaptador Defensivo (Caso as chaves da API não sejam óbvias)
-    const logsFormatados = dataArray.map((log: any, index: number) => {
-      const nomeStr = log.nome_aluno || log.nome || log.studentName || 'Visitante/Desconhecido';
-      const fotoAPI = log.imagem_url || log.foto || log.avatar || '';
+    if (studentsRes && studentsRes.ok) {
+      const studentsData = await studentsRes.json()
+      const alunosArray = Array.isArray(studentsData) ? studentsData : (studentsData.alunos || [])
       
-      const statusAcesso = String(log.status_acesso || log.status || log.autorizado || 'Autorizado').toLowerCase();
-      const statusFinal = statusAcesso.includes('negad') || statusAcesso === 'false' ? 'Negado' : 'Autorizado';
+      alunosArray.forEach((aluno: any) => {
+        if (aluno.ra) {
+          const foto = aluno.imagem_url || aluno.foto || aluno.avatar
+          if (foto) {
+            photoDictionary.set(String(aluno.ra), foto)
+          }
+        }
+      })
+    }
 
-      const tipoFluxo = String(log.tipo_fluxo || log.tipo || log.fluxo || log.type || 'Entrada').toLowerCase();
-      const tipoFinal = tipoFluxo.includes('saida') || tipoFluxo.includes('saída') ? 'Saída' : 'Entrada';
+    const dataArray = await reportsRes.json()
+    
+    allLogs.value = dataArray.map((log: any, index: number) => {
+      // Extração do Período
+      let periodStr = 'Noturno'
+      if (log.turma) {
+        if (log.turma.includes('_VES')) periodStr = 'Vespertino'
+        else if (log.turma.includes('_MAT')) periodStr = 'Matutino'
+      }
 
-      // Tratamento de Data seguro
-      const dataBruta = log.data_hora || log.timestamp || log.criado_em || new Date();
-      const dataOficial = new Date(dataBruta);
+      // Tratamento do Timestamp nativo do Firestore (segundos para milissegundos)
+      let logDate = new Date()
+      if (log.timestamp && log.timestamp.seconds) {
+        logDate = new Date(log.timestamp.seconds * 1000)
+      }
+
+      const tipoFluxo = String(log.tipo || 'Entrada').toLowerCase()
+      const tipoFinal = tipoFluxo.includes('saida') || tipoFluxo.includes('saída') ? 'Saída' : 'Entrada'
+      const nomeLimpo = log.nome || 'Visitante/Desconhecido'
+      const raStr = String(log.ra || 'X')
+
+      // A MÁGICA: Busca a foto real do dicionário, se não achar, usa o avatar genérico
+      const fotoReal = photoDictionary.get(raStr)
+      const avatarFinal = fotoReal ? fotoReal : `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(nomeLimpo)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`
 
       return {
-        id: log.id || log.id_relatorio || `LOG-${index}`,
-        timestamp: isNaN(dataOficial.getTime()) ? new Date() : dataOficial,
-        studentId: log.id_aluno || log.ra || log.studentId || 0,
-        studentName: nomeStr,
-        period: log.periodo || 'Indefinido',
-        course: log.curso || 'N/A',
-        avatar: fotoAPI || `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(nomeStr)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
-        status: statusFinal as 'Autorizado' | 'Negado',
-        type: tipoFinal as 'Entrada' | 'Saída'
+        id: `LOG-${raStr}-${index}`,
+        timestamp: logDate,
+        studentId: log.ra || 0,
+        studentName: nomeLimpo,
+        avatar: avatarFinal,
+        period: periodStr,
+        course: log.curso || 'Indefinido',
+        status: log.status_acesso === false ? 'Negado' : 'Autorizado',
+        type: tipoFinal
       }
-    })
-
-    // Ordena por data (Mais recente primeiro)
-    allLogs.value = logsFormatados.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    }).sort((a: AccessLog, b: AccessLog) => b.timestamp.getTime() - a.timestamp.getTime())
     
-  } catch (error) { 
-    console.error("Não foi possível carregar os relatórios:", error) 
+  } catch (error: any) { 
+    console.error("Erro Relatórios:", error)
+    toast({ 
+      title: "API Indisponível", 
+      description: error.message || "A rota de relatórios falhou.", 
+      variant: "destructive" 
+    })
   } finally { 
     isLoadingData.value = false 
   }
@@ -89,7 +141,10 @@ onMounted(() => fetchAPIReports())
 
 const filteredLogs = computed(() => allLogs.value.filter(log => {
   const matchesSearch = log.studentName.toLowerCase().includes(searchQuery.value.toLowerCase())
-  let matchesTab = true; const today = new Date()
+  
+  let matchesTab = true
+  const today = new Date()
+  
   if (activeTab.value === 'hoje') matchesTab = new Date(log.timestamp).toDateString() === today.toDateString()
   else if (activeTab.value === 'semana') matchesTab = new Date(log.timestamp) >= new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
   else if (activeTab.value === 'entradas') matchesTab = log.type === 'Entrada'
@@ -107,6 +162,9 @@ const openLogDetail = (log: AccessLog) => { selectedLog.value = log; isDetailMod
 const goToStudentProfile = (id: string | number) => { isDetailModalOpen.value = false; router.push({ path: '/admin/estudantes', query: { id } }) }
 const paginatedLogs = computed(() => filteredLogs.value.slice((currentPage.value - 1) * itemsPerPage, currentPage.value * itemsPerPage))
 const totalPages = computed(() => Math.ceil(filteredLogs.value.length / itemsPerPage) || 1)
+
+// Resetar página ao pesquisar ou mudar aba
+watch([searchQuery, activeTab, filters], () => { currentPage.value = 1 }, { deep: true })
 </script>
 
 <template>
@@ -115,7 +173,7 @@ const totalPages = computed(() => Math.ceil(filteredLogs.value.length / itemsPer
       <div class="flex items-center gap-3 w-full sm:w-auto">
         <div class="relative w-full sm:w-96">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input v-model="searchQuery" placeholder="Pesquisar por ID do registro ou aluno..." class="pl-10 h-11 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0A102E] bg-white w-full transition-all text-sm outline-none shadow-sm" />
+          <input v-model="searchQuery" placeholder="Pesquisar acesso por nome..." class="pl-10 h-11 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0A102E] bg-white w-full transition-all text-sm outline-none shadow-sm" />
         </div>
         <Button variant="outline" @click="isFilterDialogOpen = true" class="h-11 px-5 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm shrink-0 font-semibold"><Filter class="w-4 h-4" /><span class="hidden sm:inline">Filtros</span></Button>
       </div>
@@ -178,14 +236,19 @@ const totalPages = computed(() => Math.ceil(filteredLogs.value.length / itemsPer
     <Dialog v-model:open="isDetailModalOpen">
       <DialogContent class="rounded-[2.5rem] sm:max-w-[450px] border-none shadow-2xl p-0 overflow-hidden font-poppins">
         <div class="bg-slate-50 p-8 flex flex-col items-center justify-center border-b border-slate-200 relative">
-          <div class="absolute top-4 right-6 bg-white px-3 py-1 rounded-full shadow-sm font-mono text-[10px] font-bold text-slate-400 tracking-widest border border-slate-100">{{ selectedLog?.id }}</div>
+          <div class="absolute top-4 right-6 bg-white px-3 py-1 rounded-full shadow-sm font-mono text-[10px] font-bold text-slate-400 tracking-widest border border-slate-100">LOG DETALHADO</div>
           <div class="relative mt-4 mb-4">
             <img :src="selectedLog?.avatar" class="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md bg-white" />
             <div class="absolute bottom-0 -right-2 p-1.5 rounded-full text-white shadow-lg border-2 border-white" :class="selectedLog?.status === 'Autorizado' ? 'bg-emerald-500' : 'bg-red-500'"><ShieldCheck v-if="selectedLog?.status === 'Autorizado'" class="w-5 h-5" /><ShieldAlert v-else class="w-5 h-5" /></div>
           </div>
           <h2 class="text-xl font-bold text-slate-900 tracking-tight text-center">{{ selectedLog?.studentName }}</h2>
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">{{ selectedLog?.course }} • {{ selectedLog?.period }}</p>
         </div>
-        <DialogFooter class="p-6 bg-white gap-2 flex-col sm:flex-row">
+        <div class="p-8 grid grid-cols-2 gap-y-6 gap-x-4 bg-white">
+          <div class="flex flex-col"><span class="text-[9px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5 mb-1"><Clock class="w-3 h-3" /> Horário</span><span class="font-bold text-slate-800 text-sm">{{ selectedLog ? formatDate(selectedLog.timestamp) : '' }}</span></div>
+          <div class="flex flex-col border-l border-slate-100 pl-4"><span class="text-[9px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5 mb-1"><ArrowUpDown class="w-3 h-3" /> Fluxo</span><span class="font-bold text-sm" :class="selectedLog?.type === 'Entrada' ? 'text-blue-600' : 'text-amber-600'">{{ selectedLog?.type }} Identificada</span></div>
+        </div>
+        <DialogFooter class="p-6 pt-0 bg-white gap-2 flex-col sm:flex-row">
           <Button variant="outline" @click="isDetailModalOpen = false" class="w-full rounded-2xl h-12 font-bold border-slate-200">Voltar</Button>
           <Button @click="selectedLog && goToStudentProfile(selectedLog.studentId)" class="w-full bg-[#1A1A3A] hover:bg-[#0F0F24] text-white rounded-2xl h-12 font-bold shadow-md gap-2"><User class="w-4 h-4" /> Ver Perfil</Button>
         </DialogFooter>
