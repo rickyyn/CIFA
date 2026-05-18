@@ -16,13 +16,13 @@ public class TurmaService {
 
     private Firestore db;
 
-    public TurmaService(Firestore db){
+    public TurmaService(Firestore db) {
         this.db = db;
     }
 
-    public String adicionar(Turma turma){
-        try{
-        String idTurma = turma.getId();
+    public String adicionar(Turma turma) {
+        try {
+            String idTurma = turma.getId();
             if (idTurma == null || idTurma.isEmpty()) {
                 throw new RuntimeException("O ID da turma não pode ser vazio");
             }
@@ -34,8 +34,8 @@ public class TurmaService {
         }
     }
 
-    public String editar(String id, Turma turma){
-        try{
+    public String editar(String id, Turma turma) {
+        try {
             DocumentReference docRef = db.collection("Turmas").document(id);
             docRef.update(
                     "ano_semestre", turma.getAno_semestre(),
@@ -48,8 +48,8 @@ public class TurmaService {
         }
     }
 
-    public String excluir(String id){
-        try{
+    public String excluir(String id) {
+        try {
             DocumentReference docRef = db.collection("Turmas").document(id);
             ApiFuture<WriteResult> resposta = docRef.delete();
             resposta.get();
