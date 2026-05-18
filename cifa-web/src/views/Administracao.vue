@@ -9,7 +9,8 @@ import {
   UserPlus, 
   Camera,
   Loader2,
-  ImagePlus
+  ImagePlus,
+  X
 } from 'lucide-vue-next'
 import { 
   Table, 
@@ -48,6 +49,8 @@ import { useToast } from '@/components/ui/toast/use-toast'
 
 const router = useRouter()
 const { toast } = useToast()
+
+const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
 
 interface Student {
   id: string | number
@@ -95,7 +98,7 @@ const tabs: { id: TabType, label: string }[] = [
 
 const fetchAPIStudents = async (): Promise<Student[]> => {
   try {
-    const response = await fetch('https://reply-imprint-skier.ngrok-free.dev/alunos/verAlunos', {
+    const response = await fetch(`${API_BASE}/alunos/verAlunos`, {
       headers: {
         'ngrok-skip-browser-warning': 'true'
       }
@@ -210,6 +213,9 @@ const handleEditImageChange = (event: Event) => {
   }
 }
 
+// ==========================================
+// SALVAR EDIÇÃO COM FORMDATA (MUDANÇA DE 'foto' PARA 'imagem')
+// ==========================================
 const saveEdit = async () => {
   if (!studentToEdit.value) return
   isSavingEdit.value = true
@@ -221,6 +227,7 @@ const saveEdit = async () => {
     else if (s.period === 'Matutino') pStr = 'MAT'
     const idTurma = `${s.course}_${new Date().getFullYear()}_1_${pStr}`
 
+    // Usar FormData para que o Spring Boot (MultipartFile) consiga ler
     const formData = new FormData()
     formData.append('nome', s.name)
     formData.append('ra', String(s.registration))
@@ -232,19 +239,23 @@ const saveEdit = async () => {
     formData.append('rfid_tag', "")
     formData.append('esta_no_campus', "false")
 
+    // A MÁGICA: O backend Java usa "MultipartFile imagem", então temos que mandar como 'imagem'
     if (editSelectedFile.value) {
-      formData.append('foto', editSelectedFile.value)
+      formData.append('imagem', editSelectedFile.value)
     }
 
-    const response = await fetch(`https://reply-imprint-skier.ngrok-free.dev/alunos/editarAluno/${s.id}`, {
+    const response = await fetch(`${API_BASE}/alunos/editarAluno/${s.id}`, {
       method: 'PUT',
-      headers: { 'ngrok-skip-browser-warning': 'true' },
+      headers: { 
+        'ngrok-skip-browser-warning': 'true' 
+        // Nunca colocar Content-Type: application/json quando se usa FormData
+      },
       body: formData
     })
 
-    if (!response.ok) throw new Error('Erro ao atualizar')
+    if (!response.ok) throw new Error('Erro ao atualizar na API')
 
-    toast({ title: "Perfil Atualizado", description: `Os dados e a foto de ${s.name} foram salvos com sucesso.` })
+    toast({ title: "Perfil Atualizado", description: `Os dados de ${s.name} foram salvos com sucesso.` })
     isEditModalOpen.value = false
     loadStudents()
   } catch (error) {
@@ -264,7 +275,7 @@ const confirmDelete = async () => {
   const id = String(studentToDelete.value.id)
   
   try {
-    const response = await fetch(`https://reply-imprint-skier.ngrok-free.dev/alunos/excluirAluno/${id}`, {
+    const response = await fetch(`${API_BASE}/alunos/excluirAluno/${id}`, {
       method: 'DELETE',
       headers: { 'ngrok-skip-browser-warning': 'true' }
     })
@@ -411,6 +422,7 @@ const getStatusStyle = (status: string) => {
 
     <Dialog v-model:open="isEditModalOpen">
       <DialogContent class="rounded-[2.5rem] w-[95vw] sm:max-w-[650px] border-none shadow-2xl p-0 overflow-hidden font-poppins">
+        
         <div class="bg-slate-50 p-6 border-b border-slate-100">
           <DialogHeader>
             <DialogTitle class="text-xl font-bold text-slate-900">Atualizar Cadastro</DialogTitle>

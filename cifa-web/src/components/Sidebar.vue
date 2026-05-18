@@ -8,7 +8,8 @@ import {
   Settings, 
   LogOut,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  MessageSquare // <-- Adicionado o ícone para Contato
 } from 'lucide-vue-next'
 
 const props = defineProps<{ 
@@ -26,6 +27,7 @@ const menuItems = [
   { name: 'Estudantes', path: '/admin/estudantes', icon: Users },
   { name: 'Cadastro', path: '/admin/cadastro', icon: UserPlus },
   { name: 'Relatórios', path: '/admin/relatorios', icon: FileText },
+  { name: 'Suporte', path: '/admin/contato', icon: MessageSquare } // <-- Nova rota adicionada
 ]
 
 const isActive = (path: string) => route.path === path
