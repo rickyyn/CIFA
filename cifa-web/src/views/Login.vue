@@ -62,8 +62,13 @@ const handleSaveName = () => {
 <template>
   <main class="min-h-screen w-full flex bg-white font-poppins overflow-hidden">
     
-    <aside class="hidden lg:flex flex-col justify-between w-1/2 relative p-12 text-white bg-[#0A0B1A]">
-      <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <aside 
+      class="hidden lg:flex flex-col justify-between w-1/2 relative p-12 text-white bg-cover bg-center bg-no-repeat"
+      style="background-image: url('https://images.unsplash.com/photo-1620121692029-d088224ddc74?q=80&w=1332&auto=format&fit=crop');"
+    >
+      <div class="absolute inset-0 bg-[#0A0B1A]/80 z-0"></div>
+
+      <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div class="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-purple-800/40 blur-[120px] mix-blend-screen"></div>
         <div class="absolute top-[30%] -right-[20%] w-[80%] h-[80%] rounded-full bg-blue-700/30 blur-[150px] mix-blend-screen"></div>
         <div class="absolute -bottom-[20%] left-[10%] w-[60%] h-[60%] rounded-full bg-indigo-900/50 blur-[100px] mix-blend-screen"></div>

@@ -41,10 +41,11 @@ const navigate = (path: string) => {
 <template>
   <aside 
     :class="[
-      'fixed left-0 top-0 h-[100dvh] bg-[#0A102E] text-white flex flex-col justify-between z-50 shadow-2xl transition-all duration-300 ease-in-out lg:translate-x-0',
+      'fixed left-0 top-0 h-[100dvh] text-white flex flex-col justify-between z-50 shadow-2xl transition-all duration-300 ease-in-out lg:translate-x-0 bg-cover bg-center bg-no-repeat',
       isOpen ? 'translate-x-0' : '-translate-x-full',
       isCollapsed ? 'w-20' : 'w-64'
     ]"
+    style="background-image: linear-gradient(rgba(10, 16, 46, 0.85), rgba(10, 16, 46, 0.95)), url('https://images.unsplash.com/photo-1620121692029-d088224ddc74?q=80&w=1332&auto=format&fit=crop');"
   >
     <div 
       class="flex flex-col flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar transition-all duration-300"
@@ -111,7 +112,7 @@ const navigate = (path: string) => {
     </div>
 
     <div 
-      class="flex flex-col gap-2 pt-4 mt-auto shrink-0 border-t border-slate-800/50 bg-[#0A102E] transition-all duration-300"
+      class="flex flex-col gap-2 pt-4 mt-auto shrink-0 border-t border-slate-800/50 bg-transparent transition-all duration-300"
       :class="isCollapsed ? 'p-4' : 'p-6'"
     >
       <button 
