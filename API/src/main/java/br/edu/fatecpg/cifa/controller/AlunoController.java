@@ -88,7 +88,7 @@ public class AlunoController {
 
     @PutMapping("/editarSenha/{id}")
     public ResponseEntity<String> editarSenha(@PathVariable String id, @RequestBody Aluno aluno) throws Exception {
-        return ResponseEntity.ok(alunoService.redefinirSenha(id, aluno.getNovaSenha()));
+        return ResponseEntity.ok(alunoService.redefinirSenha(id, aluno.getNovaSenha(), aluno.getEmail_pessoal()));
 
     }
 

@@ -14,6 +14,7 @@ import com.google.firebase.cloud.StorageClient;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import com.opencsv.bean.HeaderColumnNameMappingStrategy;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -51,6 +52,9 @@ import com.cloudinary.utils.ObjectUtils;
 public class AlunoService {
     private final Firestore db;
     private final Cloudinary cloudinary;
+
+    @Autowired
+    private EmailService emailService;
 
     public AlunoService(Firestore db, Cloudinary cloudinary) {
         this.db = db;
@@ -362,7 +366,7 @@ public class AlunoService {
     }
 
 
-    public String redefinirSenha(String id, String novasenha) throws Exception {
+    public String redefinirSenha(String id, String novasenha, String email) throws Exception {
 
         if(novasenha.length() < 6){
             throw new IllegalAccessException("A senha deve ter no minimo 6 caracteres");
@@ -370,7 +374,56 @@ public class AlunoService {
         UserRecord.UpdateRequest authRequest = new UserRecord.UpdateRequest(id)
                 .setPassword(novasenha);
         FirebaseAuth.getInstance().updateUser(authRequest);
+
+        db.collection("Alunos").document(id)
+                .update("primeiro_acesso", true)
+                .get();
+
+        String html =
+                "<div style='background-image: url(\"https://images.unsplash.com/photo-1620121692029-d088224ddc74?q=80&w=1332&auto=format&fit=crop\"); background-size: cover; background-position: center; padding: 60px 20px; font-family: \"Poppins\", sans-serif; min-height: 100vh;'>" +
+                        "    <table align='center' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 550px; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);'>" +
+                        "        <tr>" +
+                        "            <td style='padding: 40px 32px; text-align: center; background-color: #0A102E;'>" +
+                        "                <h1 style='color: #ffffff; margin: 0; font-size: 32px; font-weight: 900; letter-spacing: 4px;'>CIFA</h1>" +
+                        "                <p style='color: #94a3b8; margin: 5px 0 0 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;'>Controle Inteligente de Fluxo Acadêmico</p>" +
+                        "            </td>" +
+                        "        </tr>" +
+                        "        <tr>" +
+                        "            <td style='padding: 40px 32px;'>" +
+                        "                <h2 style='color: #0A102E; margin-top: 0; font-size: 22px; font-weight: 800;'>Sua senha foi alterada</h2>" +
+                        "                <p style='color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 24px;'>Identificamos uma redefinição de credenciais para o seu perfil de acesso ao campus. Use a chave provisória abaixo para realizar o seu próximo login:</p>" +
+                        "                " +
+                        "                <table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px; margin: 24px 0;'>" +
+                        "                    <tr>" +
+                        "                        <td style='padding: 24px; text-align: center;'>" +
+                        "                            <span style='display: block; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; margin-bottom: 8px;'>Nova Senha de Acesso</span>" +
+                        "                            <code style='font-size: 28px; color: #4F46E5; font-family: monospace; font-weight: 900; letter-spacing: 4px;'>" + novasenha + "</code>" +
+                        "                        </td>" +
+                        "                    </tr>" +
+                        "                </table>" +
+                        "                " +
+                        "                <table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #FEF2F2; border-left: 4px solid #EF4444; border-radius: 4px;'>" +
+                        "                    <tr>" +
+                        "                        <td style='padding: 12px 16px; color: #991B1B; font-size: 13px; line-height: 1.5; font-weight: 600;'>" +
+                        "                            <strong>Atenção:</strong> Por segurança, altere esta senha assim que entrar no aplicativo." +
+                        "                        </td>" +
+                        "                    </tr>" +
+                        "                </table>" +
+                        "            </td>" +
+                        "        </tr>" +
+                        "        <tr>" +
+                        "            <td style='padding: 24px 32px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; text-align: center; font-size: 12px; color: #94A3B8; line-height: 1.5;'>" +
+                        "                Este é um disparo automático do ecossistema CIFA.<br>" +
+                        "                Centro Paula Souza · <strong>FATEC Praia Grande</strong>" +
+                        "            </td>" +
+                        "        </tr>" +
+                        "    </table>" +
+                        "</div>";
+
+        String texto = "Troque sua senha, agora é " + novasenha;
+        emailService.enviarEmail(email, "CIFA - Redefinição de Senha", texto, html);
         return "Senha atualizada com successo";
+
     }
 
 
