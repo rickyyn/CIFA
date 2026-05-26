@@ -23,7 +23,8 @@ import { Separator } from '@/components/ui/separator'
 const router = useRouter()
 const { toast } = useToast()
 
-const API_BASE = 'http://localhost:8080'
+// URL base da API atualizada
+const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
 const headers = { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' }
 
 // ==========================================
@@ -158,16 +159,27 @@ const cancelReply = () => { isReplying.value = false; replyText.value = '' }
 const sendReply = async () => {
   if (!replyText.value.trim() || !selectedMessage.value) return
   isSendingReply.value = true
+  
   try {
     const msgRef = selectedMessage.value
-    msgRef.isReplied = true
-    msgRef.replyText = replyText.value
-    msgRef.replyTimestamp = new Date()
     
-    // 1. Gravação dos dados no banco de dados via API
-    await updateMessageInAPI(msgRef)
+    // 1. Gravação do status no banco de dados
+    await updateMessageInAPI({ ...msgRef, isReplied: true, replyText: replyText.value })
+
+    // 2. Disparo para o endpoint correto
+    const emailRes = await fetch(`${API_BASE}/mensagem/responderContato`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        email: msgRef.senderEmail,
+        assunto: `Resposta CIFA Suporte: ${msgRef.subject}`,
+        mensagem: replyText.value
+      })
+    })
+
+    if (!emailRes.ok) throw new Error("Falha no servidor")
     
-    // 2. Popula os dados estruturados para a tela simulada do Gmail
+    // 3. Sucesso: Limpeza e Comprovante
     gmailData.value = {
       to: msgRef.senderEmail,
       subject: `Re: ${msgRef.subject}`,
@@ -175,20 +187,18 @@ const sendReply = async () => {
       date: new Date()
     }
     
-    // 3. Limpa estados e fecha modal de detalhes
-    isReplying.value = false
-    const currentReply = replyText.value
-    replyText.value = ''
-    isMessageModalOpen.value = false
-    
-    toast({ title: "Resposta Registrada!", description: "Dados gravados e integrados ao histórico do aluno." })
-    
-    // 4. Dispara a nova tela do Gmail na interface
     isGmailScreenActive.value = true
+    isMessageModalOpen.value = false
+    toast({ title: "Resposta Enviada!", description: "O e-mail foi processado." })
     
   } catch (error) {
-    toast({ title: "Erro ao Responder", description: "Não foi possível gravar a resposta na API.", variant: "destructive" })
-  } finally { isSendingReply.value = false }
+    toast({ title: "Erro", description: "Falha ao enviar e-mail.", variant: "destructive" })
+  } finally {
+    // ESTA É A LINHA QUE GARANTE QUE VOCÊ POSSA MANDAR OUTRO DEPOIS
+    isSendingReply.value = false
+    replyText.value = ''
+    isReplying.value = false
+  }
 }
 
 // ==========================================
@@ -213,29 +223,23 @@ const passwordRequests = ref<PasswordRequest[]>([])
 const fetchPasswordRequests = async () => {
   isLoadingPasswords.value = true
   try {
-    const response = await fetch(`${API_BASE}/mensagem/exibirSolicitacoesSenha`, { headers })
-    if (!response.ok) throw new Error('Falha ao conectar')
+    const response = await fetch(`${API_BASE}/mensagem/exibirsSolicitacoesSenha`, { headers })
+    if (!response.ok) throw new Error('Falha na API')
     
     const data = await response.json()
-    const dataArray = Array.isArray(data) ? data : []
+    console.log("DEBUG - Dados de Senha:", data)
 
-    passwordRequests.value = dataArray.map((req: any) => {
-      let reqDate = new Date()
-      if (req.timestamp && req.timestamp.seconds) reqDate = new Date(req.timestamp.seconds * 1000)
-      else if (req.data_solicitacao || req.createdAt) reqDate = new Date(req.data_solicitacao || req.createdAt)
-
-      return {
-        id: req.id || Math.random().toString(36).substring(7),
-        studentName: req.nome || 'Usuário Desconhecido',
-        ra: String(req.ra || ''),
-        email: req.email || 'sem-email@fatec.sp.gov.br',
-        timestamp: reqDate,
-        status: (req.resolvida || req.status === 'Resolvido' || req.isResolved) ? 'Resolvido' : 'Pendente',
-        _rawData: req
-      }
-    })
-  } catch (error: any) {
-    console.error("Erro na API de Senhas", error)
+    passwordRequests.value = data.map((req: any) => ({
+      id: req.id,
+      studentName: 'Aluno Solicitante', // A API não retorna o nome, usaremos um padrão
+      ra: 'Não informado',            // A API não retorna o RA
+      email: req.email,
+      timestamp: new Date(),          // A API não retorna a data
+      status: req.status === 'Resolvido' ? 'Resolvido' : 'Pendente',
+      _rawData: req
+    }))
+  } catch (error) {
+    console.error("Erro Senhas:", error)
   } finally {
     isLoadingPasswords.value = false
   }

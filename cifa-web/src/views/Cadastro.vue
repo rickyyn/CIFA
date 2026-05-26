@@ -22,7 +22,7 @@ import { useToast } from '@/components/ui/toast/use-toast'
 const router = useRouter()
 const { toast } = useToast()
 
-const API_BASE = 'http://localhost:8080'
+const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
 const headers = { 'ngrok-skip-browser-warning': 'true' }
 
 // ==========================================
@@ -40,7 +40,6 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const imagePreview = ref<string | null>(null)
 const selectedImageFile = ref<File | null>(null)
 
-// CORREÇÃO: Variáveis padronizadas como String para bater com o Select do Shadcn
 const studentForm = ref({
   nome: '', ra: '', id_turma: '', email: '', status: 'Ativo', semestre: '1', validade: ''
 })
@@ -72,10 +71,7 @@ const submitStudentManual = async () => {
     formData.append('email_institucional', studentForm.value.email)
     formData.append('email_pessoal', studentForm.value.email)
     formData.append('status_ativo', String(studentForm.value.status === 'Ativo'))
-    
-    // CORREÇÃO: Forçando fallback para garantir que nunca envia null ou undefined
     formData.append('ciclo_atual', String(Number(studentForm.value.semestre) || 1))
-    
     formData.append('validade_acesso', studentForm.value.validade)
     formData.append('rfid_tag', "")
     formData.append('esta_no_campus', "false")
@@ -110,6 +106,23 @@ const handleCsvChange = (event: Event) => {
   }
 }
 
+const downloadCsvTemplate = () => {
+  // Cabeçalhos que mapeiam diretamente com os requisitos do backend
+  const csvHeaders = "nome,ra,id_turma,email_institucional,status_ativo,ciclo_atual,validade_acesso\n"
+  const csvExample = "Exemplo Silva,146028123456,DSM_2026_1_VES,exemplo@fatec.sp.gov.br,true,1,2026-12-31\n"
+  
+  const blob = new Blob([csvHeaders + csvExample], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.setAttribute('href', url)
+  link.setAttribute('download', 'template_cadastro_alunos.csv')
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  
+  toast({ title: "Download Concluído", description: "Utilize o ficheiro para preencher os dados dos alunos." })
+}
+
 const importCsv = async () => {
   if (!selectedCsvFile.value) return
   isImportingCsv.value = true
@@ -134,7 +147,6 @@ const importCsv = async () => {
 const listTurmas = ref<any[]>([])
 const isLoadingTurmas = ref(false)
 
-// CORREÇÃO: Strings como padrão para manter o Data Binding do Vue
 const classForm = ref({ 
   sigla: '', 
   ano: String(new Date().getFullYear()), 
@@ -159,10 +171,10 @@ const generatedClassId = computed(() => {
 const fetchTurmas = async () => {
   isLoadingTurmas.value = true
   try {
-    const res = await fetch(`${API_BASE}/turmas/verTurmas`, { headers })
+    // ALTERAÇÃO: Adicionar API_BASE antes da rota
+    const res = await fetch(`${API_BASE}/turmas/editarTurma/{id}`, { headers }) 
     if (res.ok) listTurmas.value = await res.json()
   } catch { 
-    // Silenciado até o backend criar a rota
   } finally { isLoadingTurmas.value = false }
 }
 
@@ -170,7 +182,6 @@ const submitTurma = async () => {
   if (!classForm.value.sigla || !classForm.value.periodo) return
   isSubmittingClass.value = true
   try {
-    // CORREÇÃO: Cast rigoroso para Number com Fallbacks para evitar nullPointerException no Java
     const payload = {
       id: generatedClassId.value,
       curso_sigla: classForm.value.sigla,
@@ -179,8 +190,8 @@ const submitTurma = async () => {
       periodo: classForm.value.periodo
     }
     const res = await fetch(`${API_BASE}/turmas/adicionarTurma`, {
-      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-    })
+  method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+})
     
     if (!res.ok) {
       const errorTxt = await res.text()
@@ -207,8 +218,8 @@ const confirmEditTurma = async () => {
     }
 
     const res = await fetch(`${API_BASE}/turmas/editarTurma/${idToEdit}`, {
-      method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-    })
+  method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+})
     if (!res.ok) throw new Error()
     toast({ title: "Turma Atualizada", description: "Dados gravados." })
     isEditTurmaOpen.value = false; fetchTurmas()
@@ -230,7 +241,6 @@ const confirmDeleteTurma = async () => {
 const listCursos = ref<any[]>([])
 const isLoadingCursos = ref(false)
 
-// CORREÇÃO: Duração como string inicial
 const courseForm = ref({ nome: '', sigla: '', duracao: '6' })
 const isSubmittingCourse = ref(false)
 
@@ -242,10 +252,9 @@ const cursoToDelete = ref<any>(null)
 const fetchCursos = async () => {
   isLoadingCursos.value = true
   try {
-    const res = await fetch(`${API_BASE}/cursos/verCursos`, { headers })
+    const res = await fetch(`${API_BASE}/cursos/editarCurso/{id}`, { headers })
     if (res.ok) listCursos.value = await res.json()
   } catch { 
-    // Silenciado até o backend criar a rota
   } finally { isLoadingCursos.value = false }
 }
 
@@ -253,7 +262,6 @@ const submitCourse = async () => {
   if (!courseForm.value.nome || !courseForm.value.sigla) return
   isSubmittingCourse.value = true
   try {
-    // CORREÇÃO: Cast seguro para Number
     const payload = { 
       id: courseForm.value.sigla.toUpperCase(),
       nome: courseForm.value.nome, 
@@ -261,8 +269,8 @@ const submitCourse = async () => {
     }
     
     const res = await fetch(`${API_BASE}/cursos/adicionarCurso`, {
-      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-    })
+  method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+})
     
     if (!res.ok) {
       const errorTxt = await res.text()
@@ -286,8 +294,8 @@ const confirmEditCurso = async () => {
     }
 
     const res = await fetch(`${API_BASE}/cursos/editarCurso/${payload.id}`, {
-      method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-    })
+  method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+})
     if (!res.ok) throw new Error()
     toast({ title: "Curso Atualizado", description: "Dados gravados." })
     isEditCursoOpen.value = false; fetchCursos()
@@ -394,8 +402,10 @@ const goBack = () => router.back()
               <h3 class="text-2xl font-extrabold text-slate-900 mb-3">Importação Nativa de CSV</h3>
               <p class="text-slate-500 max-w-lg mx-auto text-sm leading-relaxed">Envie o ficheiro CSV para o endpoint seguro do backend realizar a injeção diretamente no Firebase.</p>
             </div>
+            
             <input type="file" ref="csvInputRef" @change="handleCsvChange" accept=".csv" class="hidden" />
-            <div @click="() => csvInputRef?.click()" class="w-full max-w-2xl mx-auto border-2 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center p-12 cursor-pointer bg-slate-50 hover:bg-white hover:border-indigo-400 transition-all shadow-sm" :class="selectedCsvFile ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-300'">
+            
+            <div @click="() => csvInputRef?.click()" class="w-full max-w-2xl mx-auto border-2 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center p-12 cursor-pointer bg-slate-50 hover:bg-white hover:border-indigo-400 transition-all shadow-sm mb-6" :class="selectedCsvFile ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-300'">
               <template v-if="!selectedCsvFile">
                 <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-md mb-6"><FileSpreadsheet class="w-10 h-10 text-indigo-400" /></div>
                 <h4 class="text-xl font-bold text-slate-800 mb-2">Clique para adicionar o CSV</h4>
@@ -405,8 +415,13 @@ const goBack = () => router.back()
                 <h4 class="text-xl font-bold text-slate-800 mb-2 truncate">{{ selectedCsvFile.name }}</h4>
               </template>
             </div>
-            <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto w-full">
-              <Button @click="importCsv" :disabled="!selectedCsvFile || isImportingCsv" class="h-14 rounded-2xl font-bold text-white gap-2 w-full shadow-lg transition-all" :class="selectedCsvFile ? 'bg-[#1A1A3A]' : 'bg-slate-800 opacity-50'">
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto w-full">
+              <Button @click="downloadCsvTemplate" variant="outline" class="h-14 rounded-2xl font-bold text-[#0A102E] border-slate-200 bg-white hover:bg-slate-50 gap-2 w-full sm:w-1/2 shadow-sm transition-all">
+                <DownloadCloud class="w-5 h-5" /> Baixar Template CSV
+              </Button>
+              
+              <Button @click="importCsv" :disabled="!selectedCsvFile || isImportingCsv" class="h-14 rounded-2xl font-bold text-white gap-2 w-full sm:w-1/2 shadow-lg transition-all" :class="selectedCsvFile ? 'bg-[#1A1A3A]' : 'bg-slate-800 opacity-50'">
                 <Loader2 v-if="isImportingCsv" class="w-5 h-5 animate-spin" /><UploadCloud v-else class="w-5 h-5" /> Enviar para Processamento
               </Button>
             </div>
