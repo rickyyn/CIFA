@@ -2,6 +2,7 @@ package br.edu.fatecpg.cifa.controller;
 import br.edu.fatecpg.cifa.model.Contato;
 
 import br.edu.fatecpg.cifa.model.SolicitadorSenha;
+import br.edu.fatecpg.cifa.service.EmailService;
 import br.edu.fatecpg.cifa.service.MensagemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,9 @@ public class MensagemController {
 
     @Autowired
     private MensagemService mensagemService;
+
+    @Autowired
+    private EmailService emailService;
 
     @GetMapping("/exibirContatos")
     public ResponseEntity<List<Contato>> exibirContatos(){
@@ -32,6 +36,8 @@ public class MensagemController {
         return ResponseEntity.ok(resposta);
     }
 
+//    ===============================================================================================================
+
     @GetMapping("/exibirsSolicitacoesSenha")
     public ResponseEntity<List<SolicitadorSenha>> exibirSolicitacoes(){
         return ResponseEntity.ok(mensagemService.exibirTodosSolicitacoesSenha());
@@ -47,6 +53,7 @@ public class MensagemController {
         String resposta = mensagemService.editarSolicitacao(id, ss);
         return ResponseEntity.ok(resposta);
     }
+
 
 
 }

@@ -55,5 +55,4 @@ public class Aluno {
         this.novaSenha = senha;
     }
 
-
 }
