@@ -18,5 +18,6 @@ public class SolicitadorSenha {
     @JsonIgnore
     private Timestamp data;
     private String email;
+    private String emailpessoal;
     private String status;
 }

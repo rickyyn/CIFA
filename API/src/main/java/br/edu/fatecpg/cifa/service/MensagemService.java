@@ -4,6 +4,8 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
+import jakarta.mail.internet.MimeMessage;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -54,7 +56,6 @@ public class MensagemService {
             throw new RuntimeException(e);
         }
     }
-
 
     //    codigos para Solicitações de senha, n é ia isso nao eu que coloquei mesmo
     public List<SolicitadorSenha> exibirTodosSolicitacoesSenha(){

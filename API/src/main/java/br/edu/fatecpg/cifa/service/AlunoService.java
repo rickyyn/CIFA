@@ -14,9 +14,11 @@ import com.google.firebase.cloud.StorageClient;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import com.opencsv.bean.HeaderColumnNameMappingStrategy;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -184,14 +186,21 @@ public class AlunoService {
         }
     }
 
-    public String excluirAluno(String id){
-        try{
+    public String excluirAluno(String id) {
+
+        try {
+            FirebaseAuth.getInstance().deleteUser(id);
+            System.out.println("Usuário removido do Firebase Auth com sucesso.");
+        } catch (FirebaseAuthException e) {
+            System.err.println("Usuário não encontrado no Auth: " + e.getMessage());
+        }
+        try {
             DocumentReference docRef = db.collection("Alunos").document(id);
             ApiFuture<WriteResult> resposta = docRef.delete();
             resposta.get();
             return "Aluno excluido com sucesso";
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Erro ao deletar o documento do aluno no Firestore: " + e.getMessage(), e);
         }
     }
 
@@ -425,9 +434,5 @@ public class AlunoService {
         return "Senha atualizada com successo";
 
     }
-
-
-
-
 
 }
