@@ -23,7 +23,8 @@ import { Separator } from '@/components/ui/separator'
 const router = useRouter()
 const { toast } = useToast()
 
-const API_BASE = 'http://localhost:8080'
+// URL base da API atualizada
+const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
 const headers = { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' }
 
 // ==========================================
@@ -177,7 +178,6 @@ const sendReply = async () => {
     
     // 3. Limpa estados e fecha modal de detalhes
     isReplying.value = false
-    const currentReply = replyText.value
     replyText.value = ''
     isMessageModalOpen.value = false
     
