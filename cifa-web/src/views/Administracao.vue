@@ -50,7 +50,7 @@ import { useToast } from '@/components/ui/toast/use-toast'
 const router = useRouter()
 const { toast } = useToast()
 
-const API_BASE = 'http://localhost:8080'
+const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
 
 interface Student {
   id: string | number
@@ -98,10 +98,10 @@ const tabs: { id: TabType, label: string }[] = [
 
 const fetchAPIStudents = async (): Promise<Student[]> => {
   try {
-    const response = await fetch(`${API_BASE}/alunos/verAlunos`, {
-      headers: {
-        'ngrok-skip-browser-warning': 'true'
-      }
+    // URL ATUALIZADA E FETCH COM MODO CORS
+    const response = await fetch('https://reply-imprint-skier.ngrok-free.dev/alunos/verAlunos', {
+      headers: { 'ngrok-skip-browser-warning': 'true' },
+      mode: 'cors'
     })
     if (!response.ok) throw new Error('Falha na comunicação com a API')
     
@@ -222,44 +222,30 @@ const saveEdit = async () => {
 
   try {
     const s = studentToEdit.value
-    let pStr = 'NOT'
-    if (s.period === 'Vespertino') pStr = 'VES'
-    else if (s.period === 'Matutino') pStr = 'MAT'
-    const idTurma = `${s.course}_${new Date().getFullYear()}_1_${pStr}`
-
-    // Usar FormData para que o Spring Boot (MultipartFile) consiga ler
     const formData = new FormData()
     formData.append('nome', s.name)
     formData.append('ra', String(s.registration))
-    formData.append('id_turma', idTurma)
-    formData.append('email_institucional', s.contact)
-    formData.append('email_pessoal', s.contact)
+    // Nota: O backend pode precisar do id_turma aqui
     formData.append('status_ativo', String(s.status === 'Ativo'))
     formData.append('ciclo_atual', String(s.semester))
-    formData.append('rfid_tag', "")
-    formData.append('esta_no_campus', "false")
 
-    // A MÁGICA: O backend Java usa "MultipartFile imagem", então temos que mandar como 'imagem'
     if (editSelectedFile.value) {
       formData.append('imagem', editSelectedFile.value)
     }
 
-    const response = await fetch(`${API_BASE}/alunos/editarAluno/${s.id}`, {
+    const response = await fetch(`https://reply-imprint-skier.ngrok-free.dev/alunos/editarAluno/${s.id}`, {
       method: 'PUT',
-      headers: { 
-        'ngrok-skip-browser-warning': 'true' 
-        // Nunca colocar Content-Type: application/json quando se usa FormData
-      },
+      headers: { 'ngrok-skip-browser-warning': 'true' }, // Sem Content-Type, o navegador gera o boundary do FormData
       body: formData
     })
 
     if (!response.ok) throw new Error('Erro ao atualizar na API')
 
-    toast({ title: "Perfil Atualizado", description: `Os dados de ${s.name} foram salvos com sucesso.` })
+    toast({ title: "Perfil Atualizado", description: `Os dados de ${s.name} foram salvos.` })
     isEditModalOpen.value = false
     loadStudents()
   } catch (error) {
-    toast({ title: "Falha na Edição", description: "O servidor recusou a atualização dos dados.", variant: "destructive" })
+    toast({ title: "Falha na Edição", description: "O servidor recusou a atualização.", variant: "destructive" })
   } finally {
     isSavingEdit.value = false
   }

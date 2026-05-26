@@ -42,6 +42,8 @@ import { Badge } from '@/components/ui/badge'
 const route = useRoute()
 const router = useRouter()
 
+const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
+
 // ID alterado para suportar as chaves criptografadas da sua API
 interface Student {
   id: string | number
@@ -87,8 +89,11 @@ const filters = ref({
 // ==========================================
 const fetchAPIStudents = async (): Promise<Student[]> => {
   try {
-    const response = await fetch('http://localhost:8080/alunos/verAlunos', {
-      headers: { 'ngrok-skip-browser-warning': 'true' }
+    const response = await fetch(`${API_BASE}/alunos/verAlunos`, {
+      headers: { 
+        'ngrok-skip-browser-warning': 'true',
+        'Content-Type': 'application/json'
+      }
     })
     if (!response.ok) throw new Error('Falha na comunicação com a API')
     

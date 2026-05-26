@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
-  Search, Filter, Download, ChevronLeft, ChevronRight, FileText, FileSpreadsheet, ArrowUpDown, Clock, User, ShieldCheck, ShieldAlert, ArrowRightCircle, ArrowLeftCircle
+  Search, Filter, Download, ChevronLeft, ChevronRight, FileText, FileSpreadsheet, ArrowUpDown, Clock, User, ShieldCheck, ShieldAlert, ArrowRightCircle, ArrowLeftCircle, AlertTriangle
 } from 'lucide-vue-next'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,11 @@ import { useToast } from '@/components/ui/toast/use-toast'
 const router = useRouter()
 const { toast } = useToast()
 
-const API_BASE = 'http://localhost:8080'
+const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
+const HEADERS = { 
+  'ngrok-skip-browser-warning': 'true',
+  'Content-Type': 'application/json' 
+}
 
 interface AccessLog {
   id: string | number
@@ -35,7 +39,9 @@ const isDetailModalOpen = ref(false)
 const selectedLog = ref<AccessLog | null>(null)
 const currentPage = ref(1)
 const itemsPerPage = 8
+
 const isLoadingData = ref(true)
+const apiErrorMessage = ref('')
 
 type TabType = 'todos' | 'hoje' | 'semana' | 'entradas' | 'saidas' | 'negados'
 const activeTab = ref<TabType>('todos')
@@ -52,84 +58,73 @@ const filters = ref({ period: 'todos', course: 'todos' })
 const allLogs = ref<AccessLog[]>([])
 
 // ============================================================
-// CONEXÃO INTELIGENTE COM A API (CRUZAMENTO DE DADOS)
+// 1. BUSCA PRIMÁRIA: APENAS RELATÓRIOS
 // ============================================================
 const fetchAPIReports = async () => {
   isLoadingData.value = true
+  apiErrorMessage.value = ''
+  
   try {
-    const headers = { 'ngrok-skip-browser-warning': 'true' }
+    const response = await fetch(`${API_BASE}/relatorio/exibirTodos`, { headers: HEADERS })
     
-    // Requisições paralelas para ganhar performance
-    const [reportsRes, studentsRes] = await Promise.all([
-      fetch(`${API_BASE}/relatorio/exibirTodos`, { headers }),
-      // O catch previne que a falha nos alunos quebre os relatórios
-      fetch(`${API_BASE}/alunos/verAlunos`, { headers }).catch(() => null) 
-    ])
-    
-    if (!reportsRes.ok) {
-      throw new Error(`Erro ${reportsRes.status}: Rota de relatórios não encontrada ou falha no backend.`)
+    if (!response.ok) {
+      throw new Error(`O servidor respondeu com erro ${response.status}. Verifique se o endpoint está correto ou se há bloqueio de CORS.`)
     }
 
-    // Criando um Dicionário de Fotos (RA -> URL da Foto)
-    const photoDictionary = new Map<string, string>()
+    const dataArray = await response.json()
     
-    if (studentsRes && studentsRes.ok) {
-      const studentsData = await studentsRes.json()
-      const alunosArray = Array.isArray(studentsData) ? studentsData : (studentsData.alunos || [])
-      
-      alunosArray.forEach((aluno: any) => {
-        if (aluno.ra) {
-          const foto = aluno.imagem_url || aluno.foto || aluno.avatar
-          if (foto) {
-            photoDictionary.set(String(aluno.ra), foto)
-          }
-        }
-      })
+    if (!Array.isArray(dataArray)) {
+      throw new Error("A API não devolveu uma lista (array) de dados válida.")
     }
-
-    const dataArray = await reportsRes.json()
     
-    allLogs.value = dataArray.map((log: any, index: number) => {
-      // Extração do Período
+    // DESACOPLAMENTO PARA RESOLVER O ERRO DE TIPAGEM DO TYPESCRIPT
+    const mappedLogs: AccessLog[] = dataArray.map((log: any, index: number) => {
       let periodStr = 'Noturno'
       if (log.turma) {
         if (log.turma.includes('_VES')) periodStr = 'Vespertino'
         else if (log.turma.includes('_MAT')) periodStr = 'Matutino'
       }
 
-      // Tratamento do Timestamp nativo do Firestore (segundos para milissegundos)
       let logDate = new Date()
       if (log.timestamp && log.timestamp.seconds) {
         logDate = new Date(log.timestamp.seconds * 1000)
+      } else if (log.data) {
+        logDate = new Date(log.data)
       }
 
       const tipoFluxo = String(log.tipo || 'Entrada').toLowerCase()
-      const tipoFinal = tipoFluxo.includes('saida') || tipoFluxo.includes('saída') ? 'Saída' : 'Entrada'
-      const nomeLimpo = log.nome || 'Visitante/Desconhecido'
-      const raStr = String(log.ra || 'X')
+      const tipoFinal = (tipoFluxo.includes('saida') || tipoFluxo.includes('saída')) ? 'Saída' : 'Entrada'
+      const statusFinal = log.status_acesso === false ? 'Negado' : 'Autorizado'
 
-      // A MÁGICA: Busca a foto real do dicionário, se não achar, usa o avatar genérico
-      const fotoReal = photoDictionary.get(raStr)
-      const avatarFinal = fotoReal ? fotoReal : `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(nomeLimpo)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`
+      const nomeLimpo = log.nome || 'Visitante/Desconhecido'
+      const raLimpo = String(log.ra || 'X')
 
       return {
-        id: `LOG-${raStr}-${index}`,
+        id: `LOG-${raLimpo}-${index}`,
         timestamp: logDate,
         studentId: log.ra || 0,
         studentName: nomeLimpo,
-        avatar: avatarFinal,
+        avatar: `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(nomeLimpo)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
         period: periodStr,
         course: log.curso || 'Indefinido',
-        status: log.status_acesso === false ? 'Negado' : 'Autorizado',
-        type: tipoFinal
+        status: statusFinal as 'Autorizado' | 'Negado',
+        type: tipoFinal as 'Entrada' | 'Saída'
       }
-    }).sort((a: AccessLog, b: AccessLog) => b.timestamp.getTime() - a.timestamp.getTime())
+    })
+
+    // Sort é aplicado à constante tipada e só depois enviado para a variável reativa
+    allLogs.value = mappedLogs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    
+    if (allLogs.value.length > 0) {
+      fetchPhotosBackground()
+    }
     
   } catch (error: any) { 
-    console.error("Erro Relatórios:", error)
+    console.error("ERRO CRÍTICO NOS RELATÓRIOS (F12):", error)
+    apiErrorMessage.value = error.message || "Erro desconhecido ao conectar com a API de relatórios."
     toast({ 
       title: "API Indisponível", 
-      description: error.message || "A rota de relatórios falhou.", 
+      description: apiErrorMessage.value, 
       variant: "destructive" 
     })
   } finally { 
@@ -137,8 +132,46 @@ const fetchAPIReports = async () => {
   }
 }
 
-onMounted(() => fetchAPIReports())
+// ============================================================
+// 2. BUSCA SECUNDÁRIA: FOTOS (SILENCIOSA)
+// ============================================================
+const fetchPhotosBackground = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/alunos/verAlunos`, { headers: HEADERS })
+    if (!response.ok) return 
 
+    const studentsData = await response.json()
+    const alunosArray = Array.isArray(studentsData) ? studentsData : (studentsData.alunos || [])
+    
+    const photoDictionary = new Map<string, string>()
+    
+    alunosArray.forEach((aluno: any) => {
+      if (aluno.ra) {
+        const foto = aluno.imagem_url || aluno.foto || aluno.avatar
+        if (foto) photoDictionary.set(String(aluno.ra), foto)
+      }
+    })
+
+    allLogs.value = allLogs.value.map(log => {
+      const fotoReal = photoDictionary.get(String(log.studentId))
+      if (fotoReal) {
+        return { ...log, avatar: fotoReal }
+      }
+      return log
+    })
+
+  } catch (error) {
+    console.warn("Aviso: O cruzamento de fotos falhou silenciosamente.", error)
+  }
+}
+
+onMounted(() => {
+  fetchAPIReports()
+})
+
+// ============================================================
+// LÓGICA DE FILTRAGEM
+// ============================================================
 const filteredLogs = computed(() => allLogs.value.filter(log => {
   const matchesSearch = log.studentName.toLowerCase().includes(searchQuery.value.toLowerCase())
   
@@ -163,12 +196,22 @@ const goToStudentProfile = (id: string | number) => { isDetailModalOpen.value = 
 const paginatedLogs = computed(() => filteredLogs.value.slice((currentPage.value - 1) * itemsPerPage, currentPage.value * itemsPerPage))
 const totalPages = computed(() => Math.ceil(filteredLogs.value.length / itemsPerPage) || 1)
 
-// Resetar página ao pesquisar ou mudar aba
 watch([searchQuery, activeTab, filters], () => { currentPage.value = 1 }, { deep: true })
 </script>
 
 <template>
   <div class="flex flex-col h-full space-y-2 font-poppins min-h-0">
+    
+    <div v-if="apiErrorMessage" class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl flex items-start gap-3 shadow-sm shrink-0">
+      <AlertTriangle class="w-5 h-5 shrink-0 mt-0.5" />
+      <div>
+        <h4 class="font-bold text-sm">Falha de Conexão com o Backend</h4>
+        <p class="text-xs font-medium mt-1">{{ apiErrorMessage }}</p>
+        <p class="text-xs mt-1 opacity-80">Pressione F12 para inspecionar os logs detalhados do erro.</p>
+      </div>
+      <Button @click="fetchAPIReports" variant="outline" size="sm" class="ml-auto bg-white border-red-200 hover:bg-red-50 text-red-700">Tentar Novamente</Button>
+    </div>
+
     <div class="flex flex-col sm:flex-row justify-between items-center gap-4 py-2 shrink-0">
       <div class="flex items-center gap-3 w-full sm:w-auto">
         <div class="relative w-full sm:w-96">
@@ -220,7 +263,13 @@ watch([searchQuery, activeTab, filters], () => { currentPage.value = 1 }, { deep
                 <TableCell class="py-4 px-6"><Badge :class="log.status === 'Autorizado' ? 'bg-emerald-100 text-emerald-700 border-none px-3' : 'bg-red-100 text-red-700 border-none px-3'" class="font-bold text-[10px] uppercase shadow-none">{{ log.status }}</Badge></TableCell>
               </TableRow>
             </template>
-            <template v-else><TableRow><TableCell colspan="5" class="h-64 text-center text-slate-400 italic font-medium">Nenhum registro de acesso obtido da API.</TableCell></TableRow></template>
+            <template v-else>
+              <TableRow>
+                <TableCell colspan="5" class="h-64 text-center text-slate-400 font-medium">
+                  {{ apiErrorMessage ? 'Falha ao buscar dados.' : 'Nenhum registro de acesso encontrado.' }}
+                </TableCell>
+              </TableRow>
+            </template>
           </TableBody>
         </Table>
       </div>
