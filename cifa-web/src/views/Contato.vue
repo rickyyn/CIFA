@@ -202,7 +202,7 @@ const sendReply = async () => {
 }
 
 // ==========================================
-// 2. LÓGICA DE SENHAS (API)
+// 2. LÓGICA DE SENHAS (API) - ATUALIZADA PARA /alunos/recuperarSenha
 // ==========================================
 interface PasswordRequest {
   id: string
@@ -220,6 +220,16 @@ const isResettingPassword = ref(false)
 const isLoadingPasswords = ref(true)
 const passwordRequests = ref<PasswordRequest[]>([])
 
+// Função para gerar senha aleatória
+const generateTemporaryPassword = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%'
+  let pass = ''
+  for (let i = 0; i < 10; i++) {
+    pass += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return pass
+}
+
 const fetchPasswordRequests = async () => {
   isLoadingPasswords.value = true
   try {
@@ -227,15 +237,17 @@ const fetchPasswordRequests = async () => {
     if (!response.ok) throw new Error('Falha na API')
     
     const data = await response.json()
-    console.log("DEBUG - Dados de Senha:", data)
+    console.log("DEBUG - Dados de Senha (completo):", data)
 
     passwordRequests.value = data.map((req: any) => ({
       id: req.id,
-      studentName: 'Aluno Solicitante', // A API não retorna o nome, usaremos um padrão
-      ra: 'Não informado',            // A API não retorna o RA
-      email: req.email,
-      timestamp: new Date(),          // A API não retorna a data
+      // Mantemos os campos básicos para exibição na tabela
+      studentName: req.nome || 'Aluno Solicitante',
+      ra: req.ra || req.matricula || req.registration || 'RA não encontrado',
+      email: req.emailpessoal || req.email,
+      timestamp: req.data_envio ? new Date(req.data_envio) : new Date(),
       status: req.status === 'Resolvido' ? 'Resolvido' : 'Pendente',
+      // Guardamos o objeto inteiro para usar na redefinição
       _rawData: req
     }))
   } catch (error) {
@@ -263,25 +275,83 @@ const closePasswordModal = () => {
   setTimeout(() => { selectedPasswordRequest.value = null }, 300)
 }
 
-const approvePasswordReset = async () => {
+// NOVA FUNÇÃO: envia POST para /alunos/recuperarSenha com todos os campos
+const resetPasswordAndMarkResolved = async () => {
   if (!selectedPasswordRequest.value) return
   isResettingPassword.value = true
-  
+
   try {
     const req = selectedPasswordRequest.value
-    const payload = { ...req._rawData, resolvida: true, isResolved: true, status: 'Resolvido' }
-    
-    await fetch(`${API_BASE}/mensagem/editarSolicitacao/${req.id}`, { 
-      method: 'PUT', 
-      headers, 
-      body: JSON.stringify(payload) 
+    const raw = req._rawData
+
+    // Extrai todos os campos necessários do objeto retornado pela API
+    // (ajuste os nomes conforme a resposta real)
+    const nome = raw.nome || req.studentName || 'Aluno Solicitante'
+    const emailPessoal = raw.emailpessoal || req.email
+    const emailInstitucional = raw.email_institucional || raw.email || '' // pode ser o email institucional
+    const ra = raw.ra || raw.matricula || 0
+    const idTurma = raw.id_turma || raw.turma || ''
+    const rfidTag = raw.rfid_tag || ''
+    const statusAtivo = raw.status_ativo ?? true
+    const estaNoCampus = raw.esta_no_campus ?? false
+    const imagemUrl = raw.imagem_url || ''
+    const cicloAtual = raw.ciclo_atual || 0
+
+    const novaSenha = generateTemporaryPassword()
+
+    const body = {
+      nome: nome,
+      email_pessoal: emailPessoal,
+      email_institucional: emailInstitucional,
+      ra: ra,
+      id_turma: idTurma,
+      rfid_tag: rfidTag,
+      status_ativo: statusAtivo,
+      esta_no_campus: estaNoCampus,
+      imagem_url: imagemUrl,
+      ciclo_atual: cicloAtual,
+      novaSenha: novaSenha
+    }
+
+    console.log('Enviando recuperarSenha:', body)
+
+    // 1. Chamada ao endpoint de recuperação de senha
+    const resetResponse = await fetch(`${API_BASE}/alunos/recuperarSenha`, {
+      method: 'POST',
+      headers: { ...headers },
+      body: JSON.stringify(body)
     })
 
+    if (!resetResponse.ok) {
+      const errorText = await resetResponse.text()
+      throw new Error(errorText || 'Falha ao redefinir senha')
+    }
+
+    // 2. Marca a solicitação como resolvida
+    const payload = { ...raw, resolvida: true, isResolved: true, status: 'Resolvido' }
+    await fetch(`${API_BASE}/mensagem/editarSolicitacao/${req.id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(payload)
+    })
+
+    // 3. Atualiza estado local
     req.status = 'Resolvido'
-    toast({ title: "Status Atualizado!", description: `A solicitação de ${req.studentName} foi marcada como resolvida.` })
+    
+    // 4. Exibe a nova senha para o administrador
+    toast({
+      title: 'Senha Redefinida!',
+      description: `Senha temporária: ${novaSenha}. Também enviada para ${emailPessoal}.`,
+      duration: 12000,
+    })
+
     closePasswordModal()
-  } catch (error) {
-    toast({ title: "Erro na Operação", description: "Não foi possível atualizar o banco de dados.", variant: "destructive" })
+  } catch (error: any) {
+    toast({
+      title: 'Erro na Redefinição',
+      description: error.message,
+      variant: 'destructive',
+    })
   } finally {
     isResettingPassword.value = false
   }
@@ -503,15 +573,20 @@ onMounted(() => {
 
         <div class="p-8">
           <div class="text-sm text-slate-600 leading-relaxed font-medium mb-6">
-            O aluno solicitou a redefinição de credenciais do aplicativo. Verifique o status da solicitação na base de dados:
+            O aluno solicitou a redefinição de credenciais. Uma nova senha será gerada e enviada para:
             <div class="mt-3 font-bold text-slate-900 bg-slate-50 py-2 rounded-lg border border-slate-100">{{ selectedPasswordRequest?.email }}</div>
           </div>
 
-          <Button v-if="selectedPasswordRequest?.status === 'Pendente'" @click="approvePasswordReset" :disabled="isResettingPassword" class="w-full bg-[#1A1A3A] hover:bg-[#0A102E] text-white font-bold rounded-2xl h-12 shadow-lg gap-2 transition-all">
-            <Loader2 v-if="isResettingPassword" class="w-5 h-5 animate-spin" /><Send v-else class="w-4 h-4" /> {{ isResettingPassword ? 'Aprovando na API...' : 'Marcar como Resolvido' }}
+          <Button v-if="selectedPasswordRequest?.status === 'Pendente'"
+                  @click="resetPasswordAndMarkResolved"
+                  :disabled="isResettingPassword"
+                  class="w-full bg-[#1A1A3A] hover:bg-[#0A102E] text-white font-bold rounded-2xl h-12 shadow-lg gap-2 transition-all">
+            <Loader2 v-if="isResettingPassword" class="w-5 h-5 animate-spin" />
+            <KeyRound v-else class="w-5 h-5" />
+            {{ isResettingPassword ? 'Redefinindo Senha...' : 'Redefinir Senha e Enviar por E-mail' }}
           </Button>
 
-          <div class="bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold rounded-2xl h-12 flex items-center justify-center gap-2">
+          <div v-else class="bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold rounded-2xl h-12 flex items-center justify-center gap-2">
             <CheckCircle2 class="w-5 h-5" /> Autorização Concluída
           </div>
         </div>

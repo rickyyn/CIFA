@@ -40,8 +40,9 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const imagePreview = ref<string | null>(null)
 const selectedImageFile = ref<File | null>(null)
 
+// Adicionado campo rfid
 const studentForm = ref({
-  nome: '', ra: '', id_turma: '', email: '', status: 'Ativo', semestre: '1', validade: ''
+  nome: '', ra: '', id_turma: '', email: '', status: 'Ativo', semestre: '1', validade: '', rfid: ''
 })
 
 const triggerImageSelect = () => fileInputRef.value?.click()
@@ -57,11 +58,55 @@ const handleImageChange = (event: Event) => {
   }
 }
 
+// ==========================================
+// VALIDAÇÃO DE E-MAIL DUPLICADO
+// ==========================================
+const checkEmailExists = async (email: string): Promise<boolean> => {
+  if (!email.trim()) return false
+
+  try {
+    const url = `${API_BASE}/alunos/verAlunos?_=${Date.now()}`
+    const response = await fetch(url, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
+    })
+    if (!response.ok) throw new Error('Falha ao buscar alunos')
+
+    const data = await response.json()
+    const dataArray = Array.isArray(data) ? data : (data.alunos || data.data || [])
+    
+    const emailLower = email.trim().toLowerCase()
+    return dataArray.some((aluno: any) => {
+      const inst = (aluno.email_institucional || '').toLowerCase()
+      const pess = (aluno.email_pessoal || '').toLowerCase()
+      return inst === emailLower || pess === emailLower
+    })
+  } catch (error) {
+    console.error('Erro ao verificar e-mail duplicado:', error)
+    return false
+  }
+}
+
 const submitStudentManual = async () => {
   if (!studentForm.value.nome || !studentForm.value.ra || !studentForm.value.id_turma) {
     toast({ title: "Dados Incompletos", description: "Nome, RA e ID da Turma são obrigatórios.", variant: "destructive" })
     return
   }
+
+  if (studentForm.value.email) {
+    const emailExists = await checkEmailExists(studentForm.value.email)
+    if (emailExists) {
+      toast({ 
+        title: "E-mail já cadastrado", 
+        description: `Já existe um aluno com o e-mail "${studentForm.value.email}". Utilize um e-mail diferente.`, 
+        variant: "destructive" 
+      })
+      return
+    }
+  }
+
   isSubmittingStudent.value = true
   try {
     const formData = new FormData()
@@ -73,7 +118,7 @@ const submitStudentManual = async () => {
     formData.append('status_ativo', String(studentForm.value.status === 'Ativo'))
     formData.append('ciclo_atual', String(Number(studentForm.value.semestre) || 1))
     formData.append('validade_acesso', studentForm.value.validade)
-    formData.append('rfid_tag', "")
+    formData.append('rfid_tag', studentForm.value.rfid) // Agora envia o RFID preenchido
     formData.append('esta_no_campus', "false")
     
     if (selectedImageFile.value) formData.append('foto', selectedImageFile.value)
@@ -82,7 +127,7 @@ const submitStudentManual = async () => {
     if (!res.ok) throw new Error('Erro na resposta do servidor')
     
     toast({ title: "Aluno Cadastrado!", description: "Sincronização com o banco de dados concluída." })
-    studentForm.value = { nome: '', ra: '', id_turma: '', email: '', status: 'Ativo', semestre: '1', validade: '' }
+    studentForm.value = { nome: '', ra: '', id_turma: '', email: '', status: 'Ativo', semestre: '1', validade: '', rfid: '' }
     imagePreview.value = null; selectedImageFile.value = null
   } catch (error) {
     toast({ title: "Falha na Transmissão", description: "O servidor rejeitou os dados.", variant: "destructive" })
@@ -107,9 +152,9 @@ const handleCsvChange = (event: Event) => {
 }
 
 const downloadCsvTemplate = () => {
-  // Cabeçalhos que mapeiam diretamente com os requisitos do backend
-  const csvHeaders = "nome,ra,id_turma,email_institucional,status_ativo,ciclo_atual,validade_acesso\n"
-  const csvExample = "Exemplo Silva,146028123456,DSM_2026_1_VES,exemplo@fatec.sp.gov.br,true,1,2026-12-31\n"
+  // Adicionada a coluna rfid_tag
+  const csvHeaders = "nome,ra,id_turma,email_institucional,status_ativo,ciclo_atual,validade_acesso,rfid_tag\n"
+  const csvExample = "Exemplo Silva,146028123456,DSM_2026_1_VES,exemplo@fatec.sp.gov.br,true,1,2026-12-31,123ABC456\n"
   
   const blob = new Blob([csvHeaders + csvExample], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
@@ -120,7 +165,7 @@ const downloadCsvTemplate = () => {
   link.click()
   document.body.removeChild(link)
   
-  toast({ title: "Download Concluído", description: "Utilize o ficheiro para preencher os dados dos alunos." })
+  toast({ title: "Download Concluído", description: "Utilize o ficheiro para preencher os dados dos alunos (incluindo RFID opcional)." })
 }
 
 const importCsv = async () => {
@@ -142,7 +187,7 @@ const importCsv = async () => {
 }
 
 // ==========================================
-// 2. LÓGICA DE TURMAS
+// 2. LÓGICA DE TURMAS (mantida igual)
 // ==========================================
 const listTurmas = ref<any[]>([])
 const isLoadingTurmas = ref(false)
@@ -171,7 +216,6 @@ const generatedClassId = computed(() => {
 const fetchTurmas = async () => {
   isLoadingTurmas.value = true
   try {
-    // ALTERAÇÃO: Adicionar API_BASE antes da rota
     const res = await fetch(`${API_BASE}/turmas/editarTurma/{id}`, { headers }) 
     if (res.ok) listTurmas.value = await res.json()
   } catch { 
@@ -190,8 +234,8 @@ const submitTurma = async () => {
       periodo: classForm.value.periodo
     }
     const res = await fetch(`${API_BASE}/turmas/adicionarTurma`, {
-  method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-})
+      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    })
     
     if (!res.ok) {
       const errorTxt = await res.text()
@@ -218,8 +262,8 @@ const confirmEditTurma = async () => {
     }
 
     const res = await fetch(`${API_BASE}/turmas/editarTurma/${idToEdit}`, {
-  method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-})
+      method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    })
     if (!res.ok) throw new Error()
     toast({ title: "Turma Atualizada", description: "Dados gravados." })
     isEditTurmaOpen.value = false; fetchTurmas()
@@ -236,7 +280,7 @@ const confirmDeleteTurma = async () => {
 }
 
 // ==========================================
-// 3. LÓGICA DE CURSOS
+// 3. LÓGICA DE CURSOS (mantida igual)
 // ==========================================
 const listCursos = ref<any[]>([])
 const isLoadingCursos = ref(false)
@@ -269,8 +313,8 @@ const submitCourse = async () => {
     }
     
     const res = await fetch(`${API_BASE}/cursos/adicionarCurso`, {
-  method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-})
+      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    })
     
     if (!res.ok) {
       const errorTxt = await res.text()
@@ -294,8 +338,8 @@ const confirmEditCurso = async () => {
     }
 
     const res = await fetch(`${API_BASE}/cursos/editarCurso/${payload.id}`, {
-  method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-})
+      method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    })
     if (!res.ok) throw new Error()
     toast({ title: "Curso Atualizado", description: "Dados gravados." })
     isEditCursoOpen.value = false; fetchCursos()
@@ -352,6 +396,7 @@ const goBack = () => router.back()
             </div>
           </div>
 
+          <!-- CADASTRO MANUAL -->
           <div v-if="activeAlunoMode === 'manual'" class="flex flex-col lg:flex-row gap-8 relative z-10">
             <div class="flex flex-col items-center space-y-6 w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-slate-100 pb-6 lg:pb-0 lg:pr-8">
               <div @click="triggerImageSelect" class="relative group cursor-pointer mt-4">
@@ -388,6 +433,11 @@ const goBack = () => router.back()
                   <Select v-model="studentForm.semestre"><SelectTrigger class="h-11 rounded-xl bg-slate-50"><SelectValue /></SelectTrigger><SelectContent><SelectItem v-for="n in 6" :key="n" :value="String(n)">{{ n }}º Semestre</SelectItem></SelectContent></Select>
                 </div>
                 <div class="md:col-span-2 space-y-1.5"><label class="text-[0.65rem] font-bold text-slate-400 uppercase">E-mail Institucional</label><Input v-model="studentForm.email" placeholder="aluno@fatec.sp.gov.br" class="h-11 rounded-xl bg-slate-50" /></div>
+                <!-- NOVO CAMPO RFID -->
+                <div class="md:col-span-2 space-y-1.5">
+                  <label class="text-[0.65rem] font-bold text-slate-400 uppercase">RFID Tag (opcional)</label>
+                  <Input v-model="studentForm.rfid" placeholder="Digite o código da tag RFID" class="h-11 rounded-xl bg-slate-50" />
+                </div>
               </div>
               <div class="pt-6 flex justify-end">
                 <Button @click="submitStudentManual" :disabled="isSubmittingStudent" class="bg-[#1A1A3A] hover:bg-[#0A102E] text-white px-12 h-14 rounded-2xl font-bold shadow-xl gap-3 w-full sm:w-auto active:scale-[0.97]">
@@ -397,6 +447,7 @@ const goBack = () => router.back()
             </div>
           </div>
 
+          <!-- IMPORTAÇÃO CSV -->
           <div v-else class="py-10 text-center relative z-10 flex flex-col items-center justify-center">
             <div class="mb-8">
               <h3 class="text-2xl font-extrabold text-slate-900 mb-3">Importação Nativa de CSV</h3>
@@ -428,6 +479,7 @@ const goBack = () => router.back()
           </div>
         </div>
 
+        <!-- Seções de Turmas e Cursos (mantidas exatamente iguais) -->
         <div v-else-if="activeEntity === 'turmas'" class="space-y-6">
           <div class="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm p-8 sm:p-10 relative overflow-hidden">
             <div class="text-center mb-8 flex flex-col items-center"><div class="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4"><Presentation class="w-8 h-8 text-indigo-600" /></div><h3 class="text-2xl font-extrabold text-slate-900 mb-2">Nova Turma</h3></div>

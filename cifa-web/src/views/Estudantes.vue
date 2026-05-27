@@ -44,7 +44,6 @@ const router = useRouter()
 
 const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
 
-// ID alterado para suportar as chaves criptografadas da sua API
 interface Student {
   id: string | number
   name: string
@@ -62,7 +61,7 @@ const searchQuery = ref('')
 const selectedStudent = ref<Student | null>(null)
 const isDetailModalOpen = ref(false)
 const isFilterDialogOpen = ref(false)
-const isLoadingData = ref(true) 
+const isLoadingData = ref(true)
 
 type TabType = 'todos' | 1 | 2 | 3 | 4 | 5 | 6 | 'inativos'
 const activeTab = ref<TabType>('todos')
@@ -85,14 +84,16 @@ const filters = ref({
 })
 
 // ==========================================
-// ADAPTADOR CIFA PRO (Lê a sua API nativamente)
+// BUSCA APENAS DA API (SEM DADOS FICTÍCIOS/LOCALSTORAGE)
 // ==========================================
 const fetchAPIStudents = async (): Promise<Student[]> => {
   try {
-    const response = await fetch(`${API_BASE}/alunos/verAlunos`, {
-      headers: { 
+    // Força anti-cache
+    const url = `${API_BASE}/alunos/verAlunos?_=${Date.now()}`
+    const response = await fetch(url, {
+      headers: {
         'ngrok-skip-browser-warning': 'true',
-        'Content-Type': 'application/json'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       }
     })
     if (!response.ok) throw new Error('Falha na comunicação com a API')
@@ -100,56 +101,53 @@ const fetchAPIStudents = async (): Promise<Student[]> => {
     const responseData = await response.json()
     const dataArray = Array.isArray(responseData) ? responseData : (responseData.alunos || responseData.data || [])
     
-    return dataArray.map((aluno: any, index: number) => {
-      const nomeStr = aluno.nome || 'Aluno Não Identificado'
-      const fotoAPI = aluno.imagem_url || '';
-      
-      // Inteligência de Descompactação da Turma (Ex: "DSM_2026_1_VES")
-      const turmaParts = aluno.id_turma ? aluno.id_turma.split('_') : [];
-      const courseStr = turmaParts[0] || 'Indefinido';
-      let periodStr = 'Noturno'; // Padrão
-      if (turmaParts.length >= 4) {
-        if (turmaParts[3] === 'VES') periodStr = 'Vespertino';
-        else if (turmaParts[3] === 'MAT') periodStr = 'Matutino';
-        else if (turmaParts[3] === 'NOT') periodStr = 'Noturno';
-      }
+    // Mapeia os dados reais da API – sem fallbacks fictícios
+    return dataArray
+      .filter((aluno: any) => aluno.id || aluno.idAluno || aluno.ra) // só inclui se tiver identificador real
+      .map((aluno: any) => {
+        const nomeStr = aluno.nome || 'Aluno sem nome'
+        const fotoAPI = aluno.imagem_url || ''
+        
+        const turmaParts = aluno.id_turma ? aluno.id_turma.split('_') : []
+        const courseStr = turmaParts[0] || 'Indefinido'
+        let periodStr = 'Noturno'
+        if (turmaParts.length >= 4) {
+          if (turmaParts[3] === 'VES') periodStr = 'Vespertino'
+          else if (turmaParts[3] === 'MAT') periodStr = 'Matutino'
+          else if (turmaParts[3] === 'NOT') periodStr = 'Noturno'
+        }
 
-      return {
-        id: aluno.id || Date.now() + index,
-        name: nomeStr,
-        period: periodStr,
-        course: courseStr,
-        registration: String(aluno.ra || `1460282113${index.toString().padStart(3, '0')}`),
-        contact: aluno.email_institucional || aluno.email_pessoal || 'sem-email@fatec.sp.gov.br',
-        avatar: fotoAPI || `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(nomeStr)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
-        status: aluno.status_ativo ? 'Ativo' : 'Inativo',
-        semester: Number(aluno.ciclo_atual || 1)
-      }
-    })
+        return {
+          id: String(aluno.id || aluno.idAluno || aluno.ra),
+          name: nomeStr,
+          period: periodStr,
+          course: courseStr,
+          registration: String(aluno.ra || ''), // sem RA fictício
+          contact: aluno.email_institucional || aluno.email_pessoal || '',
+          avatar: fotoAPI || `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(nomeStr)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
+          status: aluno.status_ativo ? 'Ativo' : 'Inativo',
+          semester: Number(aluno.ciclo_atual || 1)
+        }
+      })
   } catch (error) {
-    console.error("Erro ao buscar dados externos:", error)
+    console.error("Erro ao buscar dados da API:", error)
     return [] 
   }
 }
 
+// Carrega apenas os alunos da API – sem localStorage, sem persistência local
 const loadStudents = async () => {
   isLoadingData.value = true
-  const apiStudents = await fetchAPIStudents()
-  const storedData = localStorage.getItem('cifa_students')
-  const persistedStudents = storedData ? JSON.parse(storedData) : []
-  
-  const formattedPersisted = persistedStudents.map((s: any) => ({ 
-    ...s, 
-    semester: s.semester || 1,
-    avatar: s.avatar || s.imagem_url || `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(s.name)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`
-  }))
-  
-  const deletedIds: string[] = JSON.parse(localStorage.getItem('cifa_deleted_ids') || '[]').map(String)
-  const validApiStudents = apiStudents.filter(s => !deletedIds.includes(String(s.id)))
-
-  allStudents.value = [...validApiStudents, ...formattedPersisted].sort((a, b) => a.name.localeCompare(b.name))
-  isLoadingData.value = false
-  checkUrlForStudent()
+  try {
+    const apiStudents = await fetchAPIStudents()
+    allStudents.value = apiStudents.sort((a, b) => a.name.localeCompare(b.name))
+  } catch (error) {
+    console.error("Erro ao carregar alunos:", error)
+    allStudents.value = []
+  } finally {
+    isLoadingData.value = false
+    checkUrlForStudent()
+  }
 }
 
 const checkUrlForStudent = () => {
@@ -287,6 +285,7 @@ const exportToPDF = () => {
 </script>
 
 <template>
+  <!-- TEMPLATE EXATAMENTE IGUAL AO ORIGINAL, SEM ALTERAÇÕES -->
   <div class="flex flex-1 flex-col min-h-0 gap-2 font-poppins">
     
     <div class="flex flex-col sm:flex-row justify-between items-center gap-4 py-2 shrink-0">
@@ -414,6 +413,7 @@ const exportToPDF = () => {
       </div>
     </div>
 
+    <!-- MODAIS (mantidos iguais) -->
     <Dialog v-model:open="isDetailModalOpen">
       <DialogContent class="rounded-[2.5rem] sm:max-w-[500px] border-none shadow-2xl p-0 overflow-hidden font-poppins">
         <div class="bg-[#0A102E] p-8 text-center relative overflow-hidden">
