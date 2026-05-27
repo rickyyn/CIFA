@@ -85,11 +85,20 @@ public class AlunoController {
         }
     }
 
+    @PostMapping("/recuperarSenha")
+    public ResponseEntity<String> recuperarSenha(@RequestBody Aluno aluno) {
+        try {
 
-    @PutMapping("/editarSenha/{id}")
-    public ResponseEntity<String> editarSenha(@PathVariable String id, @RequestBody Aluno aluno) throws Exception {
-        return ResponseEntity.ok(alunoService.redefinirSenha(id, aluno.getNovaSenha(), aluno.getEmail_pessoal()));
+            String resultado = alunoService.redefinirSenhaPorEmail(aluno.getEmail_pessoal(), aluno.getNovaSenha());
 
+            return ResponseEntity.ok(resultado);
+        } catch (IllegalArgumentException e) {
+
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Erro ao processar recuperação de senha: " + e.getMessage());
+        }
     }
 
 }

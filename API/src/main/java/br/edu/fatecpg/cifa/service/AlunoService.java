@@ -133,7 +133,7 @@ public class AlunoService {
             aluno.setCreatedat(Timestamp.now());
             aluno.setUpdatedat(Timestamp.now());
             aluno.setStatus_ativo(true);
-
+            aluno.setPrimeiro_acesso(true);
             db.collection("Alunos").document(uid).set(aluno).get();
             return uid;
         } catch (Exception e) {
@@ -157,19 +157,23 @@ public class AlunoService {
             throw new RuntimeException("Falha ao recuperar dados do Firebase", e);
         }
     }
-
-    public void editarAluno(String id, Aluno aluno, MultipartFile imagem){
-        try{
-
+    @CacheEvict(value = "alunos", allEntries = true)
+    public void editarAluno(String id, Aluno aluno, MultipartFile imagem) {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            try {
+                FirebaseAuth.getInstance().getUser(id);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Usuário não encontrado no Firebase Auth (USER_NOT_FOUND). Garanta que o ID da URL existe no Authentication.");
+            }
             DocumentReference docRef = db.collection("Alunos").document(id);
-
             if (imagem != null && !imagem.isEmpty()) {
                 Map uploadResult = cloudinary.uploader().upload(imagem.getBytes(), ObjectUtils.emptyMap());
                 String urlDaFoto = (String) uploadResult.get("url");
                 aluno.setImagem_url(urlDaFoto);
             }
-
             docRef.update(
+                    "ciclo_atual", aluno.getCiclo_atual(),
                     "nome", aluno.getNome(),
                     "email_institucional", aluno.getEmail_institucional(),
                     "email_pessoal", aluno.getEmail_pessoal(),
@@ -180,12 +184,17 @@ public class AlunoService {
                     "status_ativo", aluno.isStatus_ativo(),
                     "esta_no_campus", aluno.isEsta_no_campus(),
                     "updatedat", Timestamp.now()
-            );
+            ).get();
+
+        } catch (IllegalArgumentException e) {
+
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Erro ao editar aluno", e);
+            throw new RuntimeException("Erro ao editar aluno no ecossistema", e);
         }
     }
 
+    @CacheEvict(value = "alunos", allEntries = true)
     public String excluirAluno(String id) {
 
         try {
@@ -364,6 +373,7 @@ public class AlunoService {
                         aluno.setStatus_ativo(true);
                         aluno.setEsta_no_campus(false);
                         aluno.setCiclo_atual(1);
+                        aluno.setPrimeiro_acesso(true);
                         db.collection("Alunos").document(userRecord.getUid()).set(aluno).get();
                         System.out.println("Usuário e Documento criados para: " + aluno.getNome());
                     } catch (FirebaseAuthException e) {
@@ -375,11 +385,30 @@ public class AlunoService {
     }
 
 
-    public String redefinirSenha(String id, String novasenha, String email) throws Exception {
+    public String redefinirSenhaPorEmail(String emailPessoal, String novasenha) throws Exception {
 
-        if(novasenha.length() < 6){
-            throw new IllegalAccessException("A senha deve ter no minimo 6 caracteres");
+
+        ApiFuture<QuerySnapshot> query = db.collection("Alunos")
+                .whereEqualTo("email_pessoal", emailPessoal)
+                .get();
+
+        QuerySnapshot querySnapshot = query.get();
+        List<QueryDocumentSnapshot> documentos = querySnapshot.getDocuments();
+
+        if (documentos.isEmpty()) {
+            throw new IllegalArgumentException("Nenhum aluno encontrado com o e-mail pessoal fornecido.");
         }
+
+        QueryDocumentSnapshot documentoAluno = documentos.get(0);
+
+        String id = documentoAluno.getId();
+        String emailInstitucional = documentoAluno.getString("email_pessoal");
+
+        if (novasenha.length() < 6) {
+            throw new IllegalArgumentException("A senha deve ter no minimo 6 caracteres");
+        }
+
+
         UserRecord.UpdateRequest authRequest = new UserRecord.UpdateRequest(id)
                 .setPassword(novasenha);
         FirebaseAuth.getInstance().updateUser(authRequest);
@@ -430,9 +459,10 @@ public class AlunoService {
                         "</div>";
 
         String texto = "Troque sua senha, agora é " + novasenha;
-        emailService.enviarEmail(email, "CIFA - Redefinição de Senha", texto, html);
-        return "Senha atualizada com successo";
 
+        emailService.enviarEmail(emailInstitucional, "CIFA - Redefinição de Senha", texto, html);
+
+        return "Senha atualizada com successo";
     }
 
 }

@@ -31,6 +31,7 @@ public class Aluno {
     @CsvBindByName(column = "id_turma")
     private String id_turma;
 
+    @CsvBindByName(column = "rfid_tag")
     private String rfid_tag;
 
     private boolean status_ativo;
@@ -43,6 +44,8 @@ public class Aluno {
     private Timestamp createdat;
     @JsonIgnore
     private Timestamp updatedat;
+
+    private boolean primeiro_acesso;
 
     @com.google.cloud.firestore.annotation.Exclude
     private String novaSenha;

@@ -75,6 +75,7 @@ public class MensagemController {
         return ResponseEntity.ok(mensagemService.exibirSolicitacaoPorId(id));
     }
 
+
     @PutMapping("/editarSolicitacao/{id}")
     public ResponseEntity<String> editarSolicitacao(@PathVariable String id, @RequestBody SolicitadorSenha ss){
         String resposta = mensagemService.editarSolicitacao(id, ss);
