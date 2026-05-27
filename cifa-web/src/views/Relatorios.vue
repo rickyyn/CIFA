@@ -16,9 +16,9 @@ const router = useRouter()
 const { toast } = useToast()
 
 const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
-const HEADERS = { 
-  'ngrok-skip-browser-warning': 'true',
-  'Content-Type': 'application/json' 
+const fetchOptions = { 
+  headers: { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' },
+  mode: 'cors' as RequestMode
 }
 
 interface AccessLog {
@@ -58,26 +58,25 @@ const filters = ref({ period: 'todos', course: 'todos' })
 const allLogs = ref<AccessLog[]>([])
 
 // ============================================================
-// 1. BUSCA PRIMÁRIA: APENAS RELATÓRIOS
+// 1. BUSCA PRIMÁRIA: RELATÓRIOS (Dados Estáticos do Acesso)
 // ============================================================
 const fetchAPIReports = async () => {
   isLoadingData.value = true
   apiErrorMessage.value = ''
   
   try {
-    const response = await fetch(`${API_BASE}/relatorio/exibirTodos`, { headers: HEADERS })
+    const response = await fetch(`${API_BASE}/relatorio/exibirTodos`, fetchOptions)
     
     if (!response.ok) {
-      throw new Error(`O servidor respondeu com erro ${response.status}. Verifique se o endpoint está correto ou se há bloqueio de CORS.`)
+      throw new Error(`O servidor respondeu com erro ${response.status}.`)
     }
 
     const dataArray = await response.json()
     
     if (!Array.isArray(dataArray)) {
-      throw new Error("A API não devolveu uma lista (array) de dados válida.")
+      throw new Error("A API não devolveu uma lista válida.")
     }
     
-    // DESACOPLAMENTO PARA RESOLVER O ERRO DE TIPAGEM DO TYPESCRIPT
     const mappedLogs: AccessLog[] = dataArray.map((log: any, index: number) => {
       let periodStr = 'Noturno'
       if (log.turma) {
@@ -112,56 +111,69 @@ const fetchAPIReports = async () => {
       }
     })
 
-    // Sort é aplicado à constante tipada e só depois enviado para a variável reativa
     allLogs.value = mappedLogs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
     
+    // Inicia a sincronização de dados atualizados logo após carregar os estáticos
     if (allLogs.value.length > 0) {
-      fetchPhotosBackground()
+      fetchLiveStudentDataBackground()
     }
     
   } catch (error: any) { 
-    console.error("ERRO CRÍTICO NOS RELATÓRIOS (F12):", error)
-    apiErrorMessage.value = error.message || "Erro desconhecido ao conectar com a API de relatórios."
-    toast({ 
-      title: "API Indisponível", 
-      description: apiErrorMessage.value, 
-      variant: "destructive" 
-    })
+    console.error("ERRO NOS RELATÓRIOS:", error)
+    apiErrorMessage.value = error.message || "Erro de conexão."
   } finally { 
     isLoadingData.value = false 
   }
 }
 
 // ============================================================
-// 2. BUSCA SECUNDÁRIA: FOTOS (SILENCIOSA)
+// 2. SINCRONIZAÇÃO EM TEMPO REAL: RESOLUÇÃO DA DESSINCRONIZAÇÃO
 // ============================================================
-const fetchPhotosBackground = async () => {
+const fetchLiveStudentDataBackground = async () => {
   try {
-    const response = await fetch(`${API_BASE}/alunos/verAlunos`, { headers: HEADERS })
+    const response = await fetch(`${API_BASE}/alunos/verAlunos`, fetchOptions)
     if (!response.ok) return 
 
     const studentsData = await response.json()
     const alunosArray = Array.isArray(studentsData) ? studentsData : (studentsData.alunos || [])
     
-    const photoDictionary = new Map<string, string>()
+    const studentDictionary = new Map<string, any>()
     
     alunosArray.forEach((aluno: any) => {
       if (aluno.ra) {
-        const foto = aluno.imagem_url || aluno.foto || aluno.avatar
-        if (foto) photoDictionary.set(String(aluno.ra), foto)
+        studentDictionary.set(String(aluno.ra), aluno)
       }
     })
 
+    // Atualiza reativamente os logs com os dados MAIS RECENTES (Nome, Foto, Curso)
     allLogs.value = allLogs.value.map(log => {
-      const fotoReal = photoDictionary.get(String(log.studentId))
-      if (fotoReal) {
-        return { ...log, avatar: fotoReal }
+      const alunoAtualizado = studentDictionary.get(String(log.studentId))
+      
+      if (alunoAtualizado) {
+        const fotoReal = alunoAtualizado.imagem_url || alunoAtualizado.foto || alunoAtualizado.avatar || log.avatar
+        const nomeReal = alunoAtualizado.nome || log.studentName
+        const turmaReal = alunoAtualizado.id_turma ? alunoAtualizado.id_turma.split('_')[0] : log.course
+        
+        let periodReal = log.period
+        if (alunoAtualizado.id_turma) {
+          if (alunoAtualizado.id_turma.includes('_VES')) periodReal = 'Vespertino'
+          else if (alunoAtualizado.id_turma.includes('_MAT')) periodReal = 'Matutino'
+          else if (alunoAtualizado.id_turma.includes('_NOT')) periodReal = 'Noturno'
+        }
+
+        return { 
+          ...log, 
+          avatar: fotoReal,
+          studentName: nomeReal,
+          course: turmaReal,
+          period: periodReal
+        }
       }
       return log
     })
 
   } catch (error) {
-    console.warn("Aviso: O cruzamento de fotos falhou silenciosamente.", error)
+    console.warn("Aviso: A sincronização com Estudantes falhou silenciosamente.", error)
   }
 }
 

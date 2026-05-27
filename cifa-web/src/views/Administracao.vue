@@ -53,15 +53,23 @@ const { toast } = useToast()
 const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
 
 interface Student {
-  id: string | number
+  id: string
   name: string
   period: string
   course: string
   registration: string
   contact: string
   avatar: string
-  status: 'Ativo' | 'Inativo' | 'Bloqueado' | 'Visitante'
+  status: 'Ativo' | 'Inativo'
   semester: number
+  id_turma: string
+  email_institucional: string
+  email_pessoal: string
+  rfid_tag: string
+  ciclo_atual: number
+  status_ativo: boolean
+  esta_no_campus: boolean
+  imagem_url: string
 }
 
 // Estados Principais
@@ -81,7 +89,7 @@ const editFileInputRef = ref<HTMLInputElement | null>(null)
 const editImagePreview = ref<string | null>(null)
 const editSelectedFile = ref<File | null>(null)
 
-// Configuração de Abas Formais
+// Configuração de Abas
 type TabType = 'todos' | 1 | 2 | 3 | 4 | 5 | 6 | 'inativos'
 const activeTab = ref<TabType>('todos')
 
@@ -96,41 +104,54 @@ const tabs: { id: TabType, label: string }[] = [
   { id: 'inativos', label: 'Inativos' }
 ]
 
-const fetchAPIStudents = async (): Promise<Student[]> => {
+// ==========================================
+// BUSCAR ALUNOS (COM ANTI-CACHE)
+// ==========================================
+const fetchStudents = async (): Promise<Student[]> => {
   try {
-    // URL ATUALIZADA E FETCH COM MODO CORS
-    const response = await fetch('https://reply-imprint-skier.ngrok-free.dev/alunos/verAlunos', {
-      headers: { 'ngrok-skip-browser-warning': 'true' },
-      mode: 'cors'
+    const url = `${API_BASE}/alunos/verAlunos?_=${Date.now()}`
+    const response = await fetch(url, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
     })
-    if (!response.ok) throw new Error('Falha na comunicação com a API')
+    if (!response.ok) throw new Error('Falha ao buscar alunos')
     
-    const responseData = await response.json()
-    const dataArray = Array.isArray(responseData) ? responseData : (responseData.alunos || responseData.data || [])
+    const data = await response.json()
+    const dataArray = Array.isArray(data) ? data : (data.alunos || data.data || [])
     
-    return dataArray.map((aluno: any, index: number) => {
+    return dataArray.map((aluno: any) => {
       const nomeStr = aluno.nome || 'Aluno Não Identificado'
-      const fotoAPI = aluno.imagem_url || aluno.foto || aluno.avatar;
-
-      const turmaParts = aluno.id_turma ? aluno.id_turma.split('_') : [];
-      const courseStr = turmaParts[0] || 'Indefinido';
-      let periodStr = 'Noturno';
+      const fotoAPI = aluno.imagem_url || aluno.foto || aluno.avatar
+      const turmaParts = aluno.id_turma ? aluno.id_turma.split('_') : []
+      const courseStr = turmaParts[0] || 'Indefinido'
+      let periodStr = 'Noturno'
       if (turmaParts.length >= 4) {
-        if (turmaParts[3] === 'VES') periodStr = 'Vespertino';
-        else if (turmaParts[3] === 'MAT') periodStr = 'Matutino';
-        else if (turmaParts[3] === 'NOT') periodStr = 'Noturno';
+        if (turmaParts[3] === 'VES') periodStr = 'Vespertino'
+        else if (turmaParts[3] === 'MAT') periodStr = 'Matutino'
+        else if (turmaParts[3] === 'NOT') periodStr = 'Noturno'
       }
 
       return {
-        id: aluno.id || aluno.idAluno || Date.now() + index,
+        id: String(aluno.id || aluno.idAluno || aluno.ra || ''),
         name: nomeStr,
         period: periodStr,
         course: courseStr,
-        registration: String(aluno.ra || `1460282113${index.toString().padStart(3, '0')}`),
+        registration: String(aluno.ra || ''),
         contact: aluno.email_institucional || aluno.email_pessoal || 'sem-email@fatec.sp.gov.br',
         avatar: fotoAPI || `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(nomeStr)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
         status: aluno.status_ativo ? 'Ativo' : 'Inativo',
-        semester: Number(aluno.ciclo_atual || 1)
+        semester: Number(aluno.ciclo_atual || 1),
+        id_turma: aluno.id_turma || '',
+        email_institucional: aluno.email_institucional || '',
+        email_pessoal: aluno.email_pessoal || '',
+        rfid_tag: aluno.rfid_tag || '',
+        ciclo_atual: Number(aluno.ciclo_atual || 1),
+        status_ativo: Boolean(aluno.status_ativo),
+        esta_no_campus: Boolean(aluno.esta_no_campus),
+        imagem_url: fotoAPI || ''
       }
     })
   } catch (error) {
@@ -139,41 +160,30 @@ const fetchAPIStudents = async (): Promise<Student[]> => {
   }
 }
 
+// ==========================================
+// CARREGAR DADOS
+// ==========================================
 const loadStudents = async () => {
   isLoadingData.value = true
-  const apiStudents = await fetchAPIStudents()
-  
-  const storedData = localStorage.getItem('cifa_students')
-  const persistedStudents: Student[] = storedData ? JSON.parse(storedData) : []
-  
-  const deletedIds: string[] = JSON.parse(localStorage.getItem('cifa_deleted_ids') || '[]').map(String)
-  
-  const validApiStudents = apiStudents.filter(s => !deletedIds.includes(String(s.id)))
-  const merged = [...validApiStudents]
-  
-  persistedStudents.forEach(ps => {
-    if (!deletedIds.includes(String(ps.id))) {
-      const index = merged.findIndex(s => String(s.id) === String(ps.id))
-      const fotoPersistida = ps.avatar || (ps as any).imagem_url || `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(ps.name)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
-      
-      const formattedStudent = {
-        ...ps,
-        semester: ps.semester || 1,
-        avatar: fotoPersistida
-      }
-      if (index !== -1) merged[index] = formattedStudent
-      else merged.push(formattedStudent)
-    }
-  })
-  
-  allStudents.value = merged.sort((a, b) => a.name.localeCompare(b.name))
-  isLoadingData.value = false
+  try {
+    const freshList = await fetchStudents()
+    allStudents.value = freshList.sort((a, b) => a.name.localeCompare(b.name))
+    console.log(`✅ Lista carregada com ${allStudents.value.length} alunos`)
+  } catch (error) {
+    console.error('❌ Erro ao carregar lista', error)
+    toast({ title: "Erro", description: "Não foi possível carregar os dados", variant: "destructive" })
+  } finally {
+    isLoadingData.value = false
+  }
 }
 
 onMounted(() => {
   loadStudents()
 })
 
+// ==========================================
+// FILTROS
+// ==========================================
 const filteredStudents = computed(() => {
   return allStudents.value.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
@@ -193,7 +203,9 @@ const getCount = (tabId: TabType) => {
   return allStudents.value.filter(s => s.semester === tabId).length
 }
 
-// Abrir Edição
+// ==========================================
+// ABRIR MODAL DE EDIÇÃO
+// ==========================================
 const openEdit = (student: Student) => {
   studentToEdit.value = JSON.parse(JSON.stringify(student))
   editImagePreview.value = student.avatar
@@ -201,7 +213,6 @@ const openEdit = (student: Student) => {
   isEditModalOpen.value = true
 }
 
-// Manipular Foto
 const handleEditImageChange = (event: Event) => {
   const target = event.target as HTMLInputElement
   if (target.files && target.files[0]) {
@@ -214,7 +225,7 @@ const handleEditImageChange = (event: Event) => {
 }
 
 // ==========================================
-// SALVAR EDIÇÃO COM FORMDATA (MUDANÇA DE 'foto' PARA 'imagem')
+// SALVAR EDIÇÃO – CORRIGIDO (redirect: 'error')
 // ==========================================
 const saveEdit = async () => {
   if (!studentToEdit.value) return
@@ -222,35 +233,73 @@ const saveEdit = async () => {
 
   try {
     const s = studentToEdit.value
-    const formData = new FormData()
-    formData.append('nome', s.name)
-    formData.append('ra', String(s.registration))
-    // Nota: O backend pode precisar do id_turma aqui
-    formData.append('status_ativo', String(s.status === 'Ativo'))
-    formData.append('ciclo_atual', String(s.semester))
+    const alunoId = s.id || s.registration
+    if (!alunoId) throw new Error('ID do aluno não encontrado')
 
+    const alunoJson = {
+      nome: s.name,
+      ra: Number(s.registration),
+      id_turma: s.id_turma,
+      email_institucional: s.email_institucional,
+      email_pessoal: s.email_pessoal,
+      status_ativo: s.status === 'Ativo',
+      ciclo_atual: s.semester,
+      rfid_tag: s.rfid_tag || '',
+      esta_no_campus: s.esta_no_campus,
+      imagem_url: s.imagem_url || ''
+    }
+
+    const formData = new FormData()
+    formData.append('aluno', new Blob([JSON.stringify(alunoJson)], { type: 'application/json' }))
     if (editSelectedFile.value) {
       formData.append('imagem', editSelectedFile.value)
     }
 
-    const response = await fetch(`https://reply-imprint-skier.ngrok-free.dev/alunos/editarAluno/${s.id}`, {
+    const url = `${API_BASE}/alunos/editarAluno/${alunoId}`
+    console.log('🔵 [PUT] Enviando para:', url)
+
+    const response = await fetch(url, {
       method: 'PUT',
-      headers: { 'ngrok-skip-browser-warning': 'true' }, // Sem Content-Type, o navegador gera o boundary do FormData
-      body: formData
+      headers: { 'ngrok-skip-browser-warning': 'true' },
+      body: formData,
+      redirect: 'error' // Impede redirecionamento automático que poderia mudar método para GET
     })
 
-    if (!response.ok) throw new Error('Erro ao atualizar na API')
+    console.log('🟢 Status:', response.status)
 
-    toast({ title: "Perfil Atualizado", description: `Os dados de ${s.name} foram salvos.` })
+    if (!response.ok) {
+      const errText = await response.text()
+      throw new Error(`${response.status} - ${errText}`)
+    }
+
+    // Atualização local
+    const index = allStudents.value.findIndex(student => student.id === s.id)
+    if (index !== -1) {
+      allStudents.value[index] = { ...allStudents.value[index], ...s }
+      if (editSelectedFile.value && editImagePreview.value) {
+        allStudents.value[index].avatar = editImagePreview.value
+      }
+      allStudents.value = [...allStudents.value].sort((a, b) => a.name.localeCompare(b.name))
+      console.log('✅ Aluno atualizado localmente')
+    } else {
+      console.warn('Aluno não encontrado no array local, recarregando lista...')
+      await loadStudents()
+    }
+
+    toast({ title: "Perfil Atualizado", description: "Dados salvos com sucesso." })
     isEditModalOpen.value = false
-    loadStudents()
-  } catch (error) {
-    toast({ title: "Falha na Edição", description: "O servidor recusou a atualização.", variant: "destructive" })
+  } catch (error: any) {
+    console.error('❌ Erro no PUT:', error)
+    toast({ title: "Falha na Edição", description: error.message, variant: "destructive" })
+    await loadStudents()
   } finally {
     isSavingEdit.value = false
   }
 }
 
+// ==========================================
+// EXCLUSÃO – CORRIGIDO (redirect: 'error')
+// ==========================================
 const openDelete = (student: Student) => {
   studentToDelete.value = student
   isDeleteModalOpen.value = true
@@ -258,30 +307,56 @@ const openDelete = (student: Student) => {
 
 const confirmDelete = async () => {
   if (!studentToDelete.value) return
-  const id = String(studentToDelete.value.id)
-  
+
+  const idToDelete = studentToDelete.value.id || studentToDelete.value.registration
+  if (!idToDelete) {
+    toast({ title: "Erro", description: "ID do aluno não identificado.", variant: "destructive" })
+    return
+  }
+
   try {
-    const response = await fetch(`${API_BASE}/alunos/excluirAluno/${id}`, {
+    const url = `${API_BASE}/alunos/excluirAluno/${idToDelete}`
+    console.log('🔴 [DELETE] Enviando para:', url)
+
+    const response = await fetch(url, {
       method: 'DELETE',
-      headers: { 'ngrok-skip-browser-warning': 'true' }
+      headers: { 'ngrok-skip-browser-warning': 'true' },
+      redirect: 'error'
     })
 
-    if (!response.ok) throw new Error('Erro ao excluir')
+    console.log('🟢 Status:', response.status)
 
-    toast({ title: "Registro Removido", description: "O aluno foi excluído permanentemente da base de dados.", variant: "destructive" })
+    if (!response.ok) {
+      const errText = await response.text()
+      throw new Error(`${response.status} - ${errText}`)
+    }
+
+    // Remoção local
+    const index = allStudents.value.findIndex(student => student.id === studentToDelete.value!.id)
+    if (index !== -1) {
+      allStudents.value.splice(index, 1)
+      console.log('✅ Aluno removido localmente')
+    } else {
+      console.warn('Aluno não encontrado no array local, recarregando lista...')
+      await loadStudents()
+    }
+
+    toast({ title: "Removido", description: "Aluno excluído.", variant: "destructive" })
     isDeleteModalOpen.value = false
-    loadStudents()
-  } catch (error) {
-    toast({ title: "Erro na Exclusão", description: "Não foi possível remover o registro na API.", variant: "destructive" })
+  } catch (error: any) {
+    console.error('❌ Erro no DELETE:', error)
+    toast({ title: "Erro", description: error.message, variant: "destructive" })
+    await loadStudents()
   }
 }
 
+// ==========================================
+// ESTILOS DE STATUS
+// ==========================================
 const getStatusStyle = (status: string) => {
   switch (status) {
     case 'Ativo': return 'bg-emerald-100 text-emerald-700'
     case 'Inativo': return 'bg-slate-200 text-slate-700'
-    case 'Bloqueado': return 'bg-red-100 text-red-700'
-    case 'Visitante': return 'bg-indigo-100 text-indigo-700'
     default: return 'bg-slate-100 text-slate-700'
   }
 }
@@ -406,6 +481,7 @@ const getStatusStyle = (status: string) => {
       </div>
     </div>
 
+    <!-- MODAL DE EDIÇÃO -->
     <Dialog v-model:open="isEditModalOpen">
       <DialogContent class="rounded-[2.5rem] w-[95vw] sm:max-w-[650px] border-none shadow-2xl p-0 overflow-hidden font-poppins">
         
@@ -461,6 +537,7 @@ const getStatusStyle = (status: string) => {
       </DialogContent>
     </Dialog>
 
+    <!-- MODAL DE EXCLUSÃO -->
     <Dialog v-model:open="isDeleteModalOpen">
       <DialogContent class="rounded-[2.5rem] w-[95vw] sm:max-w-[400px] border-none shadow-2xl text-center p-8 font-poppins">
         <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-red-50 mb-6 border-4 border-white shadow-inner"><Trash2 class="h-10 w-10 text-red-600" /></div>
