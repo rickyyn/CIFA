@@ -307,7 +307,7 @@ const exportToPDF = () => {
             class="h-11 px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm shrink-0 font-semibold disabled:opacity-50"
           >
             <Download class="w-4 h-4" /> 
-            <span>Exportar Relatório</span>
+            <span>Exportar Estudantes</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="w-44 rounded-xl border-none shadow-xl font-poppins">
