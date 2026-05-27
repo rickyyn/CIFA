@@ -42,7 +42,7 @@ import { Badge } from '@/components/ui/badge'
 const route = useRoute()
 const router = useRouter()
 
-const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
+const API_BASE = 'http://localhost:8080'
 
 interface Student {
   id: string | number
@@ -83,12 +83,9 @@ const filters = ref({
   status: 'todos'
 })
 
-// ==========================================
-// BUSCA APENAS DA API (SEM DADOS FICTÍCIOS/LOCALSTORAGE)
-// ==========================================
+
 const fetchAPIStudents = async (): Promise<Student[]> => {
   try {
-    // Força anti-cache
     const url = `${API_BASE}/alunos/verAlunos?_=${Date.now()}`
     const response = await fetch(url, {
       headers: {
@@ -101,7 +98,6 @@ const fetchAPIStudents = async (): Promise<Student[]> => {
     const responseData = await response.json()
     const dataArray = Array.isArray(responseData) ? responseData : (responseData.alunos || responseData.data || [])
     
-    // Mapeia os dados reais da API – sem fallbacks fictícios
     return dataArray
       .filter((aluno: any) => aluno.id || aluno.idAluno || aluno.ra) // só inclui se tiver identificador real
       .map((aluno: any) => {
@@ -135,7 +131,6 @@ const fetchAPIStudents = async (): Promise<Student[]> => {
   }
 }
 
-// Carrega apenas os alunos da API – sem localStorage, sem persistência local
 const loadStudents = async () => {
   isLoadingData.value = true
   try {
@@ -285,7 +280,6 @@ const exportToPDF = () => {
 </script>
 
 <template>
-  <!-- TEMPLATE EXATAMENTE IGUAL AO ORIGINAL, SEM ALTERAÇÕES -->
   <div class="flex flex-1 flex-col min-h-0 gap-2 font-poppins">
     
     <div class="flex flex-col sm:flex-row justify-between items-center gap-4 py-2 shrink-0">
@@ -413,7 +407,6 @@ const exportToPDF = () => {
       </div>
     </div>
 
-    <!-- MODAIS (mantidos iguais) -->
     <Dialog v-model:open="isDetailModalOpen">
       <DialogContent class="rounded-[2.5rem] sm:max-w-[500px] border-none shadow-2xl p-0 overflow-hidden font-poppins">
         <div class="bg-[#0A102E] p-8 text-center relative overflow-hidden">

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { 
   Search, Filter, Download, ChevronLeft, ChevronRight, FileText, FileSpreadsheet, ArrowUpDown, Clock, User, ShieldCheck, ShieldAlert, ArrowRightCircle, ArrowLeftCircle, AlertTriangle
 } from 'lucide-vue-next'
+import { jsPDF } from 'jspdf'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +16,7 @@ import { useToast } from '@/components/ui/toast/use-toast'
 const router = useRouter()
 const { toast } = useToast()
 
-const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
+const API_BASE = 'http://localhost:8080'
 const fetchOptions = { 
   headers: { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' },
   mode: 'cors' as RequestMode
@@ -57,9 +58,6 @@ const tabs: { id: TabType, label: string }[] = [
 const filters = ref({ period: 'todos', course: 'todos' })
 const allLogs = ref<AccessLog[]>([])
 
-// ============================================================
-// 1. BUSCA PRIMÁRIA: RELATÓRIOS (Dados Estáticos do Acesso)
-// ============================================================
 const fetchAPIReports = async () => {
   isLoadingData.value = true
   apiErrorMessage.value = ''
@@ -113,7 +111,6 @@ const fetchAPIReports = async () => {
 
     allLogs.value = mappedLogs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
     
-    // Inicia a sincronização de dados atualizados logo após carregar os estáticos
     if (allLogs.value.length > 0) {
       fetchLiveStudentDataBackground()
     }
@@ -126,9 +123,6 @@ const fetchAPIReports = async () => {
   }
 }
 
-// ============================================================
-// 2. SINCRONIZAÇÃO EM TEMPO REAL: RESOLUÇÃO DA DESSINCRONIZAÇÃO
-// ============================================================
 const fetchLiveStudentDataBackground = async () => {
   try {
     const response = await fetch(`${API_BASE}/alunos/verAlunos`, fetchOptions)
@@ -145,7 +139,6 @@ const fetchLiveStudentDataBackground = async () => {
       }
     })
 
-    // Atualiza reativamente os logs com os dados MAIS RECENTES (Nome, Foto, Curso)
     allLogs.value = allLogs.value.map(log => {
       const alunoAtualizado = studentDictionary.get(String(log.studentId))
       
@@ -181,9 +174,6 @@ onMounted(() => {
   fetchAPIReports()
 })
 
-// ============================================================
-// LÓGICA DE FILTRAGEM
-// ============================================================
 const filteredLogs = computed(() => allLogs.value.filter(log => {
   const matchesSearch = log.studentName.toLowerCase().includes(searchQuery.value.toLowerCase())
   
@@ -205,6 +195,105 @@ const filteredLogs = computed(() => allLogs.value.filter(log => {
 const formatDate = (date: Date) => date.toLocaleDateString('pt-BR') + ' - ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 const openLogDetail = (log: AccessLog) => { selectedLog.value = log; isDetailModalOpen.value = true }
 const goToStudentProfile = (id: string | number) => { isDetailModalOpen.value = false; router.push({ path: '/admin/estudantes', query: { id } }) }
+
+const downloadReportCsv = () => {
+  const reportRows = filteredLogs.value
+  if (!reportRows.length) {
+    toast({ title: 'Sem dados', description: 'Não há registros visíveis para exportar.' })
+    return
+  }
+
+  const header = ['Data & Hora', 'Usuário', 'Curso', 'Período', 'Fluxo', 'Status']
+  const csvRows = [header, ...reportRows.map(log => [
+    formatDate(log.timestamp),
+    log.studentName,
+    log.course,
+    log.period,
+    log.type,
+    log.status
+  ])]
+
+  const csvContent = csvRows
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\r\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.setAttribute('download', `relatorio_acessos_${new Date().toISOString().slice(0, 10)}.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(link.href)
+
+  toast({ title: 'Exportação CSV', description: 'Relatório exportado com sucesso.' })
+}
+
+const downloadReportPdf = () => {
+  const reportRows = filteredLogs.value
+  if (!reportRows.length) {
+    toast({ title: 'Sem dados', description: 'Não há registros visíveis para exportar.' })
+    return
+  }
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 40
+  let y = 40
+
+  doc.setFontSize(16)
+  doc.text('Relatório de Acessos', margin, y)
+  y += 22
+  doc.setFontSize(10)
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, y)
+  y += 24
+
+  const columns = ['Data & Hora', 'Usuário', 'Curso', 'Período', 'Fluxo', 'Status']
+  const colPositions = [margin, 170, 360, 520, 640, 740]
+
+  doc.setFontSize(9)
+  columns.forEach((title, index) => doc.text(title, colPositions[index], y))
+  y += 14
+  doc.setDrawColor(200)
+  doc.setLineWidth(0.5)
+  doc.line(margin, y, pageWidth - margin, y)
+  y += 12
+
+  reportRows.forEach(log => {
+    if (y > pageHeight - 60) {
+      doc.addPage()
+      y = 40
+      doc.setFontSize(9)
+      columns.forEach((title, index) => doc.text(title, colPositions[index], y))
+      y += 14
+      doc.setLineWidth(0.5)
+      doc.line(margin, y, pageWidth - margin, y)
+      y += 12
+    }
+
+    const row = [
+      formatDate(log.timestamp),
+      log.studentName,
+      log.course,
+      log.period,
+      log.type,
+      log.status
+    ]
+
+    row.forEach((cell, index) => {
+      doc.text(String(cell), colPositions[index], y, {
+        maxWidth: (index < colPositions.length - 1 ? colPositions[index + 1] - colPositions[index] - 10 : pageWidth - margin - colPositions[index])
+      })
+    })
+
+    y += 14
+  })
+
+  doc.save(`relatorio_acessos_${new Date().toISOString().slice(0, 10)}.pdf`)
+  toast({ title: 'Exportação PDF', description: 'Relatório exportado com sucesso.' })
+}
+
 const paginatedLogs = computed(() => filteredLogs.value.slice((currentPage.value - 1) * itemsPerPage, currentPage.value * itemsPerPage))
 const totalPages = computed(() => Math.ceil(filteredLogs.value.length / itemsPerPage) || 1)
 
@@ -235,8 +324,8 @@ watch([searchQuery, activeTab, filters], () => { currentPage.value = 1 }, { deep
       <DropdownMenu>
         <DropdownMenuTrigger as-child><Button :disabled="filteredLogs.length === 0 || isLoadingData" variant="outline" class="h-11 px-6 border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-50 gap-2 shadow-sm disabled:opacity-50 shrink-0 font-semibold"><Download class="w-4 h-4" /><span>Exportar Relatório</span></Button></DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="w-44 rounded-xl border-none shadow-xl font-poppins">
-          <DropdownMenuItem class="cursor-pointer gap-2 font-medium"><FileSpreadsheet class="w-4 h-4 text-emerald-600" /> Planilha (CSV)</DropdownMenuItem>
-          <DropdownMenuItem class="cursor-pointer gap-2 font-medium"><FileText class="w-4 h-4 text-red-600" /> Documento (PDF)</DropdownMenuItem>
+          <DropdownMenuItem @click="downloadReportCsv" class="cursor-pointer gap-2 font-medium"><FileSpreadsheet class="w-4 h-4 text-emerald-600" /> Planilha (CSV)</DropdownMenuItem>
+          <DropdownMenuItem @click="downloadReportPdf" class="cursor-pointer gap-2 font-medium"><FileText class="w-4 h-4 text-red-600" /> Documento (PDF)</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

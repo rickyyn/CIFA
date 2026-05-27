@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
-  Search, Mail, Trash2, Reply, CheckCircle2, 
+  Search, Mail, Reply, CheckCircle2, 
   Clock, ShieldAlert, Send, AlertCircle, Smartphone, KeyRound, ShieldCheck, X, MoreHorizontal, MessageSquare, Loader2
 } from 'lucide-vue-next'
 import { 
@@ -23,19 +23,12 @@ import { Separator } from '@/components/ui/separator'
 const router = useRouter()
 const { toast } = useToast()
 
-// URL base da API atualizada
-const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
+const API_BASE = 'http://localhost:8080'
 const headers = { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' }
 
-// ==========================================
-// CONTROLE DE ABAS MESTRES
-// ==========================================
 type SupportView = 'mensagens' | 'senhas'
 const activeSupportView = ref<SupportView>('mensagens')
 
-// ==========================================
-// ESTADOS DA TELA SIMULADA DO GMAIL
-// ==========================================
 const isGmailScreenActive = ref(false)
 const gmailData = ref({
   to: '',
@@ -44,9 +37,7 @@ const gmailData = ref({
   date: new Date()
 })
 
-// ==========================================
-// 1. LÓGICA DE MENSAGENS (API)
-// ==========================================
+
 interface ContactMessage {
   id: string
   senderName: string
@@ -147,12 +138,6 @@ const closeMessageModal = () => {
   }, 300)
 }
 
-const deleteMessage = (id: string) => {
-  messages.value = messages.value.filter(m => m.id !== id)
-  if (selectedMessage.value?.id === id) closeMessageModal()
-  toast({ title: "Mensagem Ocultada", description: "A solicitação foi removida da visão atual." })
-}
-
 const startReply = () => { isReplying.value = true }
 const cancelReply = () => { isReplying.value = false; replyText.value = '' }
 
@@ -163,10 +148,8 @@ const sendReply = async () => {
   try {
     const msgRef = selectedMessage.value
     
-    // 1. Gravação do status no banco de dados
     await updateMessageInAPI({ ...msgRef, isReplied: true, replyText: replyText.value })
 
-    // 2. Disparo para o endpoint correto
     const emailRes = await fetch(`${API_BASE}/mensagem/responderContato`, {
       method: 'POST',
       headers,
@@ -179,7 +162,6 @@ const sendReply = async () => {
 
     if (!emailRes.ok) throw new Error("Falha no servidor")
     
-    // 3. Sucesso: Limpeza e Comprovante
     gmailData.value = {
       to: msgRef.senderEmail,
       subject: `Re: ${msgRef.subject}`,
@@ -194,16 +176,13 @@ const sendReply = async () => {
   } catch (error) {
     toast({ title: "Erro", description: "Falha ao enviar e-mail.", variant: "destructive" })
   } finally {
-    // ESTA É A LINHA QUE GARANTE QUE VOCÊ POSSA MANDAR OUTRO DEPOIS
     isSendingReply.value = false
     replyText.value = ''
     isReplying.value = false
   }
 }
 
-// ==========================================
-// 2. LÓGICA DE SENHAS (API) - ATUALIZADA PARA /alunos/recuperarSenha
-// ==========================================
+
 interface PasswordRequest {
   id: string
   studentName: string
@@ -220,7 +199,6 @@ const isResettingPassword = ref(false)
 const isLoadingPasswords = ref(true)
 const passwordRequests = ref<PasswordRequest[]>([])
 
-// Função para gerar senha aleatória
 const generateTemporaryPassword = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%'
   let pass = ''
@@ -241,13 +219,11 @@ const fetchPasswordRequests = async () => {
 
     passwordRequests.value = data.map((req: any) => ({
       id: req.id,
-      // Mantemos os campos básicos para exibição na tabela
       studentName: req.nome || 'Aluno Solicitante',
       ra: req.ra || req.matricula || req.registration || 'RA não encontrado',
       email: req.emailpessoal || req.email,
       timestamp: req.data_envio ? new Date(req.data_envio) : new Date(),
       status: req.status === 'Resolvido' ? 'Resolvido' : 'Pendente',
-      // Guardamos o objeto inteiro para usar na redefinição
       _rawData: req
     }))
   } catch (error) {
@@ -275,7 +251,6 @@ const closePasswordModal = () => {
   setTimeout(() => { selectedPasswordRequest.value = null }, 300)
 }
 
-// NOVA FUNÇÃO: envia POST para /alunos/recuperarSenha com todos os campos
 const resetPasswordAndMarkResolved = async () => {
   if (!selectedPasswordRequest.value) return
   isResettingPassword.value = true
@@ -283,12 +258,9 @@ const resetPasswordAndMarkResolved = async () => {
   try {
     const req = selectedPasswordRequest.value
     const raw = req._rawData
-
-    // Extrai todos os campos necessários do objeto retornado pela API
-    // (ajuste os nomes conforme a resposta real)
     const nome = raw.nome || req.studentName || 'Aluno Solicitante'
     const emailPessoal = raw.emailpessoal || req.email
-    const emailInstitucional = raw.email_institucional || raw.email || '' // pode ser o email institucional
+    const emailInstitucional = raw.email_institucional || raw.email || '' 
     const ra = raw.ra || raw.matricula || 0
     const idTurma = raw.id_turma || raw.turma || ''
     const rfidTag = raw.rfid_tag || ''
@@ -315,7 +287,6 @@ const resetPasswordAndMarkResolved = async () => {
 
     console.log('Enviando recuperarSenha:', body)
 
-    // 1. Chamada ao endpoint de recuperação de senha
     const resetResponse = await fetch(`${API_BASE}/alunos/recuperarSenha`, {
       method: 'POST',
       headers: { ...headers },
@@ -327,7 +298,6 @@ const resetPasswordAndMarkResolved = async () => {
       throw new Error(errorText || 'Falha ao redefinir senha')
     }
 
-    // 2. Marca a solicitação como resolvida
     const payload = { ...raw, resolvida: true, isResolved: true, status: 'Resolvido' }
     await fetch(`${API_BASE}/mensagem/editarSolicitacao/${req.id}`, {
       method: 'PUT',
@@ -335,10 +305,8 @@ const resetPasswordAndMarkResolved = async () => {
       body: JSON.stringify(payload)
     })
 
-    // 3. Atualiza estado local
     req.status = 'Resolvido'
     
-    // 4. Exibe a nova senha para o administrador
     toast({
       title: 'Senha Redefinida!',
       description: `Senha temporária: ${novaSenha}. Também enviada para ${emailPessoal}.`,
@@ -357,9 +325,6 @@ const resetPasswordAndMarkResolved = async () => {
   }
 }
 
-// ==========================================
-// UTILITÁRIOS VISUAIS
-// ==========================================
 const formatTime = (date: Date) => date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 const formatDate = (date: Date) => date.toLocaleDateString('pt-BR') + ' ' + formatTime(date)
 const getCategoryStyle = (category: string) => {
@@ -454,8 +419,6 @@ onMounted(() => {
                     <DropdownMenuTrigger as-child><Button variant="ghost" class="h-8 w-8 p-0 rounded-full hover:bg-slate-200"><MoreHorizontal class="w-4 h-4 text-slate-600" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end" class="w-48 rounded-xl border-none shadow-xl font-poppins">
                       <DropdownMenuItem @click="openMessageModal(msg)" class="cursor-pointer gap-2 font-medium"><MessageSquare class="w-4 h-4 text-indigo-600" /> Ver Solicitação</DropdownMenuItem>
-                      <Separator class="my-1" />
-                      <DropdownMenuItem @click="deleteMessage(msg.id)" class="cursor-pointer gap-2 font-bold text-red-600 focus:text-red-700 focus:bg-red-50"><Trash2 class="w-4 h-4" /> Excluir</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

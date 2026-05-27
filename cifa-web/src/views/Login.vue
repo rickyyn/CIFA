@@ -8,12 +8,11 @@ import { Loader2, ArrowRight, UserCircle } from 'lucide-vue-next'
 
 const router = useRouter()
 
-// Estados do Fluxo
 const step = ref<'login' | 'name'>('login')
 const isLoading = ref(false)
 const errorMessage = ref('')
 
-// Dados do Formulário
+
 const identifier = ref('')
 const password = ref('')
 const adminName = ref('')
@@ -27,16 +26,15 @@ const handleLogin = () => {
   setTimeout(() => {
     isLoading.value = false
     
-    // Validação Real (Mock)
     if (identifier.value === 'admin' && password.value === '1234') {
       const storedName = localStorage.getItem('cifa_admin_name')
       
       if (storedName) {
-        // Se já tem nome, vai direto para o sistema
+        
         localStorage.setItem('cifa_auth_token', 'true')
         router.push('/admin/dashboard')
       } else {
-        // Primeiro acesso: pede o nome
+        
         step.value = 'name'
       }
     } else {

@@ -22,25 +22,19 @@ import { useToast } from '@/components/ui/toast/use-toast'
 const router = useRouter()
 const { toast } = useToast()
 
-const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
+const API_BASE = 'http://localhost:8080'
 const headers = { 'ngrok-skip-browser-warning': 'true' }
 
-// ==========================================
-// ESTADOS GERAIS DE NAVEGAÇÃO
-// ==========================================
 type EntityType = 'alunos' | 'turmas' | 'cursos'
 const activeEntity = ref<EntityType>('alunos')
 const activeAlunoMode = ref<'manual' | 'lote'>('manual')
 
-// ==========================================
-// 1. LÓGICA DE ALUNOS
-// ==========================================
+
 const isSubmittingStudent = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const imagePreview = ref<string | null>(null)
 const selectedImageFile = ref<File | null>(null)
 
-// Adicionado campo rfid
 const studentForm = ref({
   nome: '', ra: '', id_turma: '', email: '', status: 'Ativo', semestre: '1', validade: '', rfid: ''
 })
@@ -58,9 +52,7 @@ const handleImageChange = (event: Event) => {
   }
 }
 
-// ==========================================
-// VALIDAÇÃO DE E-MAIL DUPLICADO
-// ==========================================
+
 const checkEmailExists = async (email: string): Promise<boolean> => {
   if (!email.trim()) return false
 
@@ -134,7 +126,7 @@ const submitStudentManual = async () => {
   } finally { isSubmittingStudent.value = false }
 }
 
-// Lote (CSV)
+
 const isImportingCsv = ref(false)
 const csvInputRef = ref<HTMLInputElement | null>(null)
 const selectedCsvFile = ref<File | null>(null)
@@ -152,7 +144,6 @@ const handleCsvChange = (event: Event) => {
 }
 
 const downloadCsvTemplate = () => {
-  // Adicionada a coluna rfid_tag
   const csvHeaders = "nome,ra,id_turma,email_institucional,status_ativo,ciclo_atual,validade_acesso,rfid_tag\n"
   const csvExample = "Exemplo Silva,146028123456,DSM_2026_1_VES,exemplo@fatec.sp.gov.br,true,1,2026-12-31,123ABC456\n"
   
@@ -186,9 +177,7 @@ const importCsv = async () => {
   } finally { isImportingCsv.value = false }
 }
 
-// ==========================================
-// 2. LÓGICA DE TURMAS (mantida igual)
-// ==========================================
+
 const listTurmas = ref<any[]>([])
 const isLoadingTurmas = ref(false)
 
@@ -279,9 +268,7 @@ const confirmDeleteTurma = async () => {
   } catch { toast({ title: "Erro", description: "Não foi possível apagar.", variant: "destructive" }) }
 }
 
-// ==========================================
-// 3. LÓGICA DE CURSOS (mantida igual)
-// ==========================================
+
 const listCursos = ref<any[]>([])
 const isLoadingCursos = ref(false)
 
@@ -396,7 +383,7 @@ const goBack = () => router.back()
             </div>
           </div>
 
-          <!-- CADASTRO MANUAL -->
+          
           <div v-if="activeAlunoMode === 'manual'" class="flex flex-col lg:flex-row gap-8 relative z-10">
             <div class="flex flex-col items-center space-y-6 w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-slate-100 pb-6 lg:pb-0 lg:pr-8">
               <div @click="triggerImageSelect" class="relative group cursor-pointer mt-4">
@@ -432,8 +419,7 @@ const goBack = () => router.back()
                 <div class="space-y-1.5"><label class="text-[0.65rem] font-bold text-slate-400 uppercase">Semestre Atual</label>
                   <Select v-model="studentForm.semestre"><SelectTrigger class="h-11 rounded-xl bg-slate-50"><SelectValue /></SelectTrigger><SelectContent><SelectItem v-for="n in 6" :key="n" :value="String(n)">{{ n }}º Semestre</SelectItem></SelectContent></Select>
                 </div>
-                <div class="md:col-span-2 space-y-1.5"><label class="text-[0.65rem] font-bold text-slate-400 uppercase">E-mail Institucional</label><Input v-model="studentForm.email" placeholder="aluno@fatec.sp.gov.br" class="h-11 rounded-xl bg-slate-50" /></div>
-                <!-- NOVO CAMPO RFID -->
+                <div class="md:col-span-2 space-y-1.5"><label class="text-[0.65rem] font-bold text-slate-400 uppercase">E-mail Institucional</label><Input v-model="studentForm.email" placeholder="aluno@cifa.com.br" class="h-11 rounded-xl bg-slate-50" /></div>
                 <div class="md:col-span-2 space-y-1.5">
                   <label class="text-[0.65rem] font-bold text-slate-400 uppercase">RFID Tag (opcional)</label>
                   <Input v-model="studentForm.rfid" placeholder="Digite o código da tag RFID" class="h-11 rounded-xl bg-slate-50" />
@@ -447,7 +433,6 @@ const goBack = () => router.back()
             </div>
           </div>
 
-          <!-- IMPORTAÇÃO CSV -->
           <div v-else class="py-10 text-center relative z-10 flex flex-col items-center justify-center">
             <div class="mb-8">
               <h3 class="text-2xl font-extrabold text-slate-900 mb-3">Importação Nativa de CSV</h3>
@@ -479,7 +464,6 @@ const goBack = () => router.back()
           </div>
         </div>
 
-        <!-- Seções de Turmas e Cursos (mantidas exatamente iguais) -->
         <div v-else-if="activeEntity === 'turmas'" class="space-y-6">
           <div class="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm p-8 sm:p-10 relative overflow-hidden">
             <div class="text-center mb-8 flex flex-col items-center"><div class="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4"><Presentation class="w-8 h-8 text-indigo-600" /></div><h3 class="text-2xl font-extrabold text-slate-900 mb-2">Nova Turma</h3></div>

@@ -50,7 +50,7 @@ import { useToast } from '@/components/ui/toast/use-toast'
 const router = useRouter()
 const { toast } = useToast()
 
-const API_BASE = 'https://reply-imprint-skier.ngrok-free.dev'
+const API_BASE = 'http://localhost:8080'
 
 interface Student {
   id: string
@@ -72,24 +72,21 @@ interface Student {
   imagem_url: string
 }
 
-// Estados Principais
 const allStudents = ref<Student[]>([])
 const searchQuery = ref('')
 const isLoadingData = ref(true)
 
-// Estados dos Modais
 const isEditModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
 const studentToEdit = ref<Student | null>(null)
 const studentToDelete = ref<Student | null>(null)
 const isSavingEdit = ref(false)
 
-// Estados de Imagem para Edição
+
 const editFileInputRef = ref<HTMLInputElement | null>(null)
 const editImagePreview = ref<string | null>(null)
 const editSelectedFile = ref<File | null>(null)
 
-// Configuração de Abas
 type TabType = 'todos' | 1 | 2 | 3 | 4 | 5 | 6 | 'inativos'
 const activeTab = ref<TabType>('todos')
 
@@ -104,9 +101,6 @@ const tabs: { id: TabType, label: string }[] = [
   { id: 'inativos', label: 'Inativos' }
 ]
 
-// ==========================================
-// BUSCAR ALUNOS (COM ANTI-CACHE)
-// ==========================================
 const fetchStudents = async (): Promise<Student[]> => {
   try {
     const url = `${API_BASE}/alunos/verAlunos?_=${Date.now()}`
@@ -160,9 +154,6 @@ const fetchStudents = async (): Promise<Student[]> => {
   }
 }
 
-// ==========================================
-// CARREGAR DADOS
-// ==========================================
 const loadStudents = async () => {
   isLoadingData.value = true
   try {
@@ -181,9 +172,6 @@ onMounted(() => {
   loadStudents()
 })
 
-// ==========================================
-// FILTROS
-// ==========================================
 const filteredStudents = computed(() => {
   return allStudents.value.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
@@ -203,9 +191,6 @@ const getCount = (tabId: TabType) => {
   return allStudents.value.filter(s => s.semester === tabId).length
 }
 
-// ==========================================
-// ABRIR MODAL DE EDIÇÃO
-// ==========================================
 const openEdit = (student: Student) => {
   studentToEdit.value = JSON.parse(JSON.stringify(student))
   editImagePreview.value = student.avatar
@@ -224,9 +209,7 @@ const handleEditImageChange = (event: Event) => {
   }
 }
 
-// ==========================================
-// SALVAR EDIÇÃO – CORRIGIDO (redirect: 'error')
-// ==========================================
+
 const saveEdit = async () => {
   if (!studentToEdit.value) return
   isSavingEdit.value = true
@@ -262,7 +245,7 @@ const saveEdit = async () => {
       method: 'PUT',
       headers: { 'ngrok-skip-browser-warning': 'true' },
       body: formData,
-      redirect: 'error' // Impede redirecionamento automático que poderia mudar método para GET
+      redirect: 'error' 
     })
 
     console.log('🟢 Status:', response.status)
@@ -272,7 +255,7 @@ const saveEdit = async () => {
       throw new Error(`${response.status} - ${errText}`)
     }
 
-    // Atualização local
+    
     const index = allStudents.value.findIndex(student => student.id === s.id)
     if (index !== -1) {
       allStudents.value[index] = { ...allStudents.value[index], ...s }
@@ -297,9 +280,7 @@ const saveEdit = async () => {
   }
 }
 
-// ==========================================
-// EXCLUSÃO – CORRIGIDO (redirect: 'error')
-// ==========================================
+
 const openDelete = (student: Student) => {
   studentToDelete.value = student
   isDeleteModalOpen.value = true
@@ -331,7 +312,7 @@ const confirmDelete = async () => {
       throw new Error(`${response.status} - ${errText}`)
     }
 
-    // Remoção local
+    
     const index = allStudents.value.findIndex(student => student.id === studentToDelete.value!.id)
     if (index !== -1) {
       allStudents.value.splice(index, 1)
@@ -350,9 +331,6 @@ const confirmDelete = async () => {
   }
 }
 
-// ==========================================
-// ESTILOS DE STATUS
-// ==========================================
 const getStatusStyle = (status: string) => {
   switch (status) {
     case 'Ativo': return 'bg-emerald-100 text-emerald-700'
@@ -481,7 +459,7 @@ const getStatusStyle = (status: string) => {
       </div>
     </div>
 
-    <!-- MODAL DE EDIÇÃO -->
+    
     <Dialog v-model:open="isEditModalOpen">
       <DialogContent class="rounded-[2.5rem] w-[95vw] sm:max-w-[650px] border-none shadow-2xl p-0 overflow-hidden font-poppins">
         
@@ -537,7 +515,6 @@ const getStatusStyle = (status: string) => {
       </DialogContent>
     </Dialog>
 
-    <!-- MODAL DE EXCLUSÃO -->
     <Dialog v-model:open="isDeleteModalOpen">
       <DialogContent class="rounded-[2.5rem] w-[95vw] sm:max-w-[400px] border-none shadow-2xl text-center p-8 font-poppins">
         <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-red-50 mb-6 border-4 border-white shadow-inner"><Trash2 class="h-10 w-10 text-red-600" /></div>
